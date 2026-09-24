@@ -3,6 +3,7 @@
 // set, so the rest of the subscription system — trials, plan limits, the
 // dashboard UI — works out of the box before anyone wires up real billing.
 const { getEnv } = require("../config/env");
+const { badRequest, notImplemented } = require("../lib/errors");
 
 let client;
 function getClient() {
@@ -15,9 +16,7 @@ function getClient() {
 function assertConfigured() {
   const stripe = getClient();
   if (!stripe) {
-    const err = new Error("Billing is not configured. Set STRIPE_SECRET_KEY to enable checkout.");
-    err.status = 501;
-    throw err;
+    throw notImplemented("Billing is not configured. Set STRIPE_SECRET_KEY to enable checkout.");
   }
   return stripe;
 }
@@ -53,9 +52,7 @@ async function createCheckoutSession({ account, ownerEmail, priceId, successUrl,
 async function createPortalSession({ account, returnUrl }) {
   const stripe = assertConfigured();
   if (!account.stripeCustomerId) {
-    const err = new Error("This account has no billing profile yet.");
-    err.status = 400;
-    throw err;
+    throw badRequest("This account has no billing profile yet.", "NO_BILLING_PROFILE");
   }
   return stripe.billingPortal.sessions.create({
     customer: account.stripeCustomerId,
@@ -67,9 +64,7 @@ function verifyWebhookSignature(rawBody, signature) {
   const stripe = assertConfigured();
   const secret = getEnv().STRIPE_WEBHOOK_SECRET;
   if (!secret) {
-    const err = new Error("STRIPE_WEBHOOK_SECRET is not set.");
-    err.status = 501;
-    throw err;
+    throw notImplemented("STRIPE_WEBHOOK_SECRET is not set.");
   }
   return stripe.webhooks.constructEvent(rawBody, signature, secret);
 }

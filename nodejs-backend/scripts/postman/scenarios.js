@@ -1,0 +1,197 @@
+// One executable source for the Postman collection and the HTTP verification run.
+const steps = [];
+let folder;
+const group = (name) => { folder = name; };
+function add(name, method, url, body, options = {}) {
+  steps.push({ folder, name, method, url, body, status: method === "POST" && body ? 201 : 200, ...options });
+}
+const get = (name, url, options) => add(name, "GET", url, undefined, options);
+const post = (name, url, body, options) => add(name, "POST", url, body, options);
+const put = (name, url, body, options) => add(name, "PUT", url, body, options);
+const del = (name, url, options) => add(name, "DELETE", url, undefined, options);
+const captureId = (key) => ({ capture: { [key]: "id" } });
+const authCapture = { token: "access_token", account_id: "account_id", business_code: "business_code" };
+const admin = { auth: "platform_token" };
+const customer = (name, phone) => ({ name, phone, address: "12 Sample Road, Pune, Maharashtra" });
+const item = (name) => ({ name, category_id: "{{category_id}}", description: "Demo rental equipment", stock_count: 20, rent_per_day: 250, deposit_amount: 0, purchase_price_per_unit: 5000, useful_life_years: 5 });
+const rental = { customer_id: "{{customer_id}}", equipment_id: "{{equipment_id}}", quantity: 1, expected_return_date: "{{future_date}}", advance_amount: 50, payment_method: "Cash", remark: "Postman demonstration" };
+const plan = { key: "demo-temp-{{run_id}}", name: "Temporary API Test Plan", price: 0, currency: "INR", billing_cycle: "monthly", is_public: false, limits: { maxShops: 3, maxStaffUsers: 5 }, features: { advancedReports: true, maintenance: true, analytics: true, customBranding: true } };
+
+group("01 Public and new test business");
+get("Health and start a fresh test run", "/health", { auth: false, initialize: true });
+get("Database readiness", "/ready", { auth: false });
+get("Public pricing plans", "/plans", { auth: false, check: "array" });
+get("Currencies, icons, payment methods and plan capabilities", "/catalog", { auth: false });
+post("Register owner, business, main shop and trial", "/auth/register", { username: "{{owner_username}}", password: "{{demo_password}}", company_name: "{{company_name}}", shop_name: "Main Rental Shop", currency: "INR" }, { auth: false, capture: { ...authCapture, shop_id: "shop_id" }, note: "Creates a new, uniquely named demo business on every complete collection run. The bootstrap seed must have created a trial plan first." });
+post("Platform administrator login", "/auth/admin/login", { username: "{{platform_username}}", password: "{{platform_password}}" }, { auth: false, status: 200, capture: { platform_token: "access_token" } });
+put("Enable all demo features without charging", "/platform/accounts/{{account_id}}/plan", { plan_id: "{{demo_plan_id}}", auto_renew: false }, { ...admin, note: "Assigns the private zero-price demo plan created by seed:demo; no Stripe payment is involved." });
+
+group("02 Login, profile and team");
+post("Owner login", "/auth/login", { username: "{{owner_username}}", password: "{{demo_password}}", business_code: "{{business_code}}" }, { auth: false, status: 200, capture: authCapture });
+get("Current user", "/auth/me", { check: "user" });
+put("Change own password and refresh token", "/auth/me/password", { current_password: "{{demo_password}}", new_password: "{{alternate_password}}" }, { capture: { token: "access_token" } });
+put("Restore demo password and refresh token", "/auth/me/password", { current_password: "{{alternate_password}}", new_password: "{{demo_password}}" }, { capture: { token: "access_token" } });
+post("Create business administrator", "/auth/users", { username: "demo.admin", password: "{{demo_password}}", role: "admin" }, captureId("admin_user_id"));
+post("Create shop staff", "/auth/users", { username: "demo.staff", password: "{{demo_password}}", role: "staff", shop_id: "{{shop_id}}" }, captureId("staff_user_id"));
+post("Staff login", "/auth/login", { username: "demo.staff", password: "{{demo_password}}", business_code: "{{business_code}}" }, { auth: false, status: 200, capture: { staff_token: "access_token" } });
+post("Create disposable team member through legacy signup", "/auth/signup", { username: "demo.temporary", password: "{{demo_password}}", role: "staff", shop_id: "{{shop_id}}" }, captureId("temporary_user_id"));
+get("List team members", "/auth/users", { check: "array" });
+put("Update disposable team member", "/auth/users/{{temporary_user_id}}", { username: "demo.temporary", role: "staff", shop_id: "{{shop_id}}", email: null });
+put("Change team member role", "/auth/users/{{temporary_user_id}}/role", { role: "admin" });
+put("Set team member password", "/auth/users/{{temporary_user_id}}/password", { new_password: "{{demo_password}}" });
+put("Legacy rename and password update", "/auth/users/username/demo.temporary", { new_username: "demo.renamed", new_password: "{{demo_password}}" });
+del("Delete disposable user by ID", "/auth/users/{{temporary_user_id}}");
+post("Create another disposable legacy user", "/auth/signup", { username: "demo.delete.me", password: "{{demo_password}}", role: "staff" });
+del("Delete disposable user by username", "/auth/users/username/demo.delete.me");
+
+group("03 Account and shops");
+get("Business and subscription summary", "/account/me");
+get("Current usage and plan limits", "/account/usage");
+get("Company invoice details", "/account/company");
+put("Update company invoice details", "/account/company", { company_name: "{{company_name}}", address: "12 Sample Road, Pune", phone: "+91 90000 00001", email: "demo@example.test", tax_id: "DEMO-TAX-001", footer_note: "Thank you for renting with us.", default_tax_rate_percent: 0, currency: "INR" });
+get("List accessible shops", "/shops", { check: "array" });
+post("Create disposable second shop", "/shops", { name: "Temporary Test Branch", address: "45 Test Street, Pune", phone: "+91 90000 00002" }, captureId("temporary_shop_id"));
+put("Update second shop", "/shops/{{temporary_shop_id}}", { name: "Updated Test Branch", is_active: true });
+get("Second shop summary", "/shops/{{temporary_shop_id}}/summary");
+del("Delete empty second shop", "/shops/{{temporary_shop_id}}");
+
+group("04 Image uploads and file downloads");
+post("Upload equipment photo", "/upload?kind=equipment", undefined, { status: 201, upload: true, capture: { equipment_image_key: "key", file_url: "url" }, note: "Multipart field file; select .postman/fixtures/sample.png. Let Postman set the multipart Content-Type boundary." });
+get("Download uploaded public equipment photo", "{{file_url}}", { auth: false, check: "image", route: "GET /files/{key}" });
+post("Upload private customer document photo", "/upload?kind=customer_doc", undefined, { status: 201, upload: true, capture: { document_key: "key", private_file_url: "url" } });
+get("Download private file with signed URL", "{{private_file_url}}", { auth: false, check: "image", route: "GET /files/{key}", note: "The URL includes exp and sig. Refresh it by reading the owning record after expiration. A bearer token alone does not authorize private downloads." });
+
+group("05 Categories and equipment");
+post("Create tools category", "/categories", { name: "Power Tools" }, captureId("category_id"));
+post("Create disposable category", "/categories", { name: "Temporary Category" }, captureId("temporary_category_id"));
+get("List categories with pagination", "/categories?page=1&page_size=20&include_stats=true", { check: "paginated" });
+post("Reorder categories", "/categories/reorder", { ordered_ids: ["{{category_id}}", "{{temporary_category_id}}"] }, { status: 200 });
+put("Rename disposable category", "/categories/{{temporary_category_id}}", { name: "Renamed Temporary Category" });
+post("Archive disposable category", "/categories/{{temporary_category_id}}/archive", undefined);
+post("Restore disposable category", "/categories/{{temporary_category_id}}/restore", undefined);
+del("Delete empty disposable category", "/categories/{{temporary_category_id}}");
+post("Create rotary drill with photo and initial stock", "/equipment", { ...item("Rotary Drill"), images: ["{{equipment_image_key}}"] }, captureId("equipment_id"));
+post("Create concrete mixer", "/equipment", item("Concrete Mixer"), captureId("second_equipment_id"));
+get("List equipment", "/equipment?page=1&page_size=20&category_id={{category_id}}", { check: "paginated" });
+get("Equipment details and maintenance history", "/equipment/{{equipment_id}}");
+put("Update equipment details", "/equipment/{{equipment_id}}", { description: "Heavy duty drill - demonstration unit", rent_per_day: 250, useful_life_years: 5 });
+post("Duplicate equipment with zero stock", "/equipment/{{equipment_id}}/duplicate", undefined, { status: 201, ...captureId("duplicate_equipment_id") });
+post("Archive duplicate", "/equipment/{{duplicate_equipment_id}}/archive", undefined);
+post("Restore duplicate", "/equipment/{{duplicate_equipment_id}}/restore", undefined);
+del("Delete unused duplicate", "/equipment/{{duplicate_equipment_id}}");
+post("Add equipment stock", "/equipment/{{equipment_id}}/stock", { quantity_added: 5, unit_price: 4500, note: "Demo restock" }, { status: 200 });
+post("Record equipment damage", "/equipment/maintenance", { equipment_id: "{{equipment_id}}", action: "Damage", quantity: 1, remark: "Demo damaged switch", cost: 0 }, { status: 201 });
+post("Repair damaged equipment", "/equipment/maintenance", { equipment_id: "{{equipment_id}}", action: "Repair", quantity: 1, remark: "Replaced switch", cost: 150 }, { status: 201 });
+post("Scrap one unit", "/equipment/{{equipment_id}}/scrap", { quantity: 1, remark: "Demo end-of-life disposal" }, { status: 200 });
+
+group("06 Customers");
+post("Create customer Aarav", "/customers", { ...customer("Aarav Demo", "9000000001"), doc_url: "{{document_key}}" }, captureId("customer_id"));
+post("Create customer Meera", "/customers", customer("Meera Demo", "9000000002"), captureId("second_customer_id"));
+post("Create disposable customer", "/customers", customer("Temporary Demo", "9000000099"), captureId("temporary_customer_id"));
+get("List customers", "/customers?page=1&page_size=20&include_stats=true", { check: "paginated" });
+get("Find customer by ID", "/customers/{{customer_id}}");
+get("Find customer by phone", "/customers/9000000001");
+put("Update disposable customer", "/customers/{{temporary_customer_id}}", { name: "Updated Temporary Demo", address: "99 Example Lane" });
+post("Archive disposable customer", "/customers/{{temporary_customer_id}}/archive", undefined);
+post("Restore disposable customer", "/customers/{{temporary_customer_id}}/restore", undefined);
+del("Delete customer without history", "/customers/{{temporary_customer_id}}");
+
+group("07 Reservations and notices");
+post("Reserve drill for Aarav as owner", "/reservations", { customer_id: "{{customer_id}}", equipment_id: "{{equipment_id}}", quantity: 1 }, captureId("reservation_id"));
+get("List customer draft reservations", "/reservations?customer_id={{customer_id}}", { check: "array" });
+post("Transfer reservation as staff to Meera", "/reservations/{{reservation_id}}/transfer", { to_customer_id: "{{second_customer_id}}" }, { auth: "staff_token", status: 200, ...captureId("reservation_id"), note: "A different user transfers this hold so the previous owner receives a notice." });
+get("Read reservation transfer notices as owner", "/reservations/notices", { capture: { notice_id: "0.id" }, check: "array" });
+post("Acknowledge transfer notice", "/reservations/notices/{{notice_id}}/ack", undefined);
+del("Release transferred reservation", "/reservations/{{reservation_id}}");
+post("Create another customer draft hold", "/reservations", { customer_id: "{{customer_id}}", equipment_id: "{{equipment_id}}", quantity: 1 });
+del("Clear all draft holds for a customer", "/reservations/customer/{{customer_id}}");
+
+group("08 Rentals, returns and invoices");
+post("Create single rental", "/rentals", rental, captureId("rental_id"));
+get("List active rentals", "/rentals?status=Active&page=1&page_size=20", { check: "paginated" });
+get("Rental details", "/rentals/{{rental_id}}", { check: "active" });
+put("Update active rental advance and due date", "/rentals/{{rental_id}}", { advance_amount: 75, expected_return_date: "{{future_date}}", remark: "Demo advance increased", payment_method: "Cash" });
+get("Rental payment ledger", "/rentals/{{rental_id}}/payments", { check: "array" });
+post("Complete single rental with a balance due", "/rentals/{{rental_id}}/complete", { amount_paid_on_return: 25, discount_amount: 0, tax_rate_percent: 0, late_fee_amount: 0, damage_amount: 0, due_date: "{{future_date}}", payment_method: "Cash" }, { status: 200, check: "completed" });
+post("Pay remaining rental invoice balance", "/rentals/{{rental_id}}/payment", { amount_paid: 150, discount_amount: 0, payment_method: "Cash" }, { status: 200, check: "paid" });
+get("List rental history", "/rentals/history?include_cancelled=true&page=1&page_size=20", { check: "paginated" });
+get("List invoices", "/invoices?page=1&page_size=20&customer_id={{customer_id}}", { check: "paginated" });
+get("Rental invoice JSON", "/invoices/{{rental_id}}");
+get("Rental invoice PDF", "/invoices/{{rental_id}}/pdf", { check: "pdf" });
+get("Customer statement PDF", "/customers/{{customer_id}}/statement/pdf", { check: "pdf" });
+post("Create multi-item rental order", "/rentals/bulk", { customer_id: "{{customer_id}}", items: [{ equipment_id: "{{equipment_id}}", quantity: 1 }, { equipment_id: "{{second_equipment_id}}", quantity: 1 }], expected_return_date: "{{future_date}}", advance_amount: 0, payment_method: "Cash", remark: "Bulk rental demo" }, { capture: { bulk_rental_id: "0.id", second_bulk_rental_id: "1.id" }, check: "array" });
+post("Preview batch return totals without changing stock", "/rentals/return/preview", { rental_ids: ["{{bulk_rental_id}}", "{{second_bulk_rental_id}}"], amount_paid: 100, discount_amount: 0, tax_rate_percent: 0 }, { status: 200 });
+post("Return both rental items", "/rentals/return", { rental_ids: ["{{bulk_rental_id}}", "{{second_bulk_rental_id}}"], amount_paid: 100, discount_amount: 0, late_fee_amount: 0, damage_amount: 0, tax_rate_percent: 0, due_date: "{{future_date}}", payment_method: "Cash" }, { status: 200 });
+post("Create disposable rental for cancellation", "/rentals", rental, captureId("cancel_rental_id"));
+post("Cancel rental and refund advance", "/rentals/{{cancel_rental_id}}/cancel", { refund_advance: true, payment_method: "Cash" }, { status: 200 });
+del("Delete cancelled disposable rental", "/rentals/{{cancel_rental_id}}");
+post("Leave an active demo rental for manual testing", "/rentals", { ...rental, customer_id: "{{second_customer_id}}", equipment_id: "{{second_equipment_id}}" }, captureId("active_rental_id"));
+
+group("09 Equipment sales and inventory");
+post("Sell a drill with part payment", "/equipment/{{equipment_id}}/sell", { customer_id: "{{customer_id}}", quantity: 1, selling_price: 3500, amount_paid: 1000, remark: "Demo used equipment sale", payment_method: "Cash" }, { status: 201, ...captureId("sale_id") });
+get("List equipment sales", "/equipment/sales?page=1&page_size=20&customer_id={{customer_id}}", { check: "paginated" });
+post("Collect remaining sale payment", "/equipment/sales/{{sale_id}}/payment", { amount_paid: 2500, payment_method: "Cash" }, { status: 200, check: "paid" });
+get("Equipment sales summary", "/equipment/sales/summary?start_date={{start_date}}&end_date={{end_date}}");
+get("Inventory movement ledger", "/inventory/transactions?equipment_id={{equipment_id}}&page=1&page_size=20", { check: "paginated" });
+get("Inventory stock and cost summary", "/inventory/summary");
+
+group("10 Expenses and settings");
+post("Create disposable expense", "/expenses", { category: "Transport", amount: 450, remark: "Demo delivery charge", payment_mode: "Cash", date: "{{today}}" }, captureId("expense_id"));
+get("List expenses", "/expenses?page=1&page_size=20&date_from={{start_date}}&date_to={{end_date}}", { check: "paginated" });
+put("Update expense", "/expenses/{{expense_id}}", { amount: 500, remark: "Updated demo delivery charge" });
+post("Archive expense", "/expenses/{{expense_id}}/archive", undefined);
+post("Restore expense", "/expenses/{{expense_id}}/restore", undefined);
+del("Delete disposable expense", "/expenses/{{expense_id}}");
+post("Leave a demo operating expense", "/expenses", { category: "Utilities", amount: 1200, remark: "Demo monthly electricity", payment_mode: "Cash", date: "{{today}}" }, captureId("saved_expense_id"));
+post("Create disposable recurring expense", "/expenses/recurring", { category: "Office Rent", amount: 10000, day_of_month: 1, remark: "Temporary recurring test" }, captureId("recurring_id"));
+get("List recurring expense templates", "/expenses/recurring", { check: "array" });
+put("Update recurring expense", "/expenses/recurring/{{recurring_id}}", { amount: 11000, day_of_month: 2, is_active: false });
+del("Delete recurring template", "/expenses/recurring/{{recurring_id}}");
+post("Leave recurring internet expense", "/expenses/recurring", { category: "Internet", amount: 799, day_of_month: 1, remark: "Demo monthly internet" }, captureId("saved_recurring_id"));
+put("Set low stock alert threshold", "/settings/low_stock_threshold", { value: 3 });
+get("Read low stock alert threshold", "/settings/low_stock_threshold");
+get("List business and shop settings", "/settings", { check: "array" });
+
+group("11 Reports and subscription");
+get("Dashboard with India timezone", "/reports/dashboard?tz=330");
+for (const report of ["daily", "payments", "summary", "net-profit"]) get(`${report} report`, `/reports/${report}?start_date={{start_date}}&end_date={{end_date}}&tz=330`);
+get("Record counts", "/stats");
+get("Current subscription and plan", "/subscription");
+get("Stripe invoice list (empty before billing setup)", "/subscription/invoices", { check: "array" });
+post("Checkout configuration check", "/subscription/checkout", { plan_key: "starter" }, { status: 400, errorCode: "NO_STRIPE_PRICE", note: "Default Starter has no Stripe price ID, so this deliberate configuration check expects 400 NO_STRIPE_PRICE. For successful checkout, use the optional integration request." });
+post("Billing portal configuration check", "/subscription/portal", undefined, { status: 501, errorCode: "NOT_CONFIGURED", note: "Expected 501 until STRIPE_SECRET_KEY is configured. A configured account additionally needs a Stripe customer ID." });
+post("Schedule demo subscription cancellation", "/subscription/cancel", undefined);
+put("Restore demo subscription after cancellation test", "/platform/accounts/{{account_id}}/plan", { plan_id: "{{demo_plan_id}}", auto_renew: false }, admin);
+post("Reject unsigned Stripe webhook", "/subscription/webhook", { id: "evt_demo_unsigned", type: "demo.verification", data: { object: {} } }, { auth: false, status: 400, errorCode: "BAD_SIGNATURE", note: "Deliberate signature rejection. The optional signed webhook uses a fresh timestamp and an actual configured signing secret." });
+
+group("12 Platform administration");
+get("Platform dashboard", "/platform/dashboard?expiring_within_days=7", admin);
+get("List all plans including private plans", "/platform/plans", { ...admin, check: "array" });
+post("Create disposable private plan", "/platform/plans", plan, { ...admin, ...captureId("temporary_plan_id") });
+put("Update disposable plan", "/platform/plans/{{temporary_plan_id}}", { name: "Updated Temporary Plan", price: 0, features: { advancedReports: true } }, admin);
+del("Delete unused disposable plan", "/platform/plans/{{temporary_plan_id}}", admin);
+get("List tenant businesses", "/platform/accounts", { ...admin, check: "array" });
+get("Inspect seeded demo business", "/platform/accounts/{{account_id}}", admin);
+post("Register disposable business for platform lifecycle tests", "/auth/register", { username: "disposable.owner.{{run_id}}", password: "{{demo_password}}", company_name: "Disposable API Test {{run_id}}", currency: "INR" }, { auth: false, capture: { disposable_account_id: "account_id" } });
+post("Suspend disposable business", "/platform/accounts/{{disposable_account_id}}/suspend", undefined, admin);
+post("Reactivate disposable business", "/platform/accounts/{{disposable_account_id}}/reactivate", undefined, admin);
+del("Delete disposable business and its data", "/platform/accounts/{{disposable_account_id}}", { ...admin, note: "Deletes only the disposable account captured by the preceding registration. Never substitute a real customer account ID." });
+
+group("13 Validation and permission checks");
+get("Reject unauthenticated business access", "/customers", { auth: false, status: 401, errorCode: "UNAUTHENTICATED" });
+post("Reject staff category administration", "/categories", { name: "Forbidden staff category" }, { auth: "staff_token", status: 403 });
+post("Reject invalid equipment ID", "/rentals", { ...rental, equipment_id: "invalid-id" }, { status: 400, errorCode: "VALIDATION_ERROR" });
+post("Reject duplicate customer phone", "/customers", customer("Duplicate Demo", "9000000001"), { status: 409 });
+post("Reject renting more stock than available", "/rentals", { ...rental, quantity: 100000, advance_amount: 0 }, { status: 400, errorCode: "INSUFFICIENT_STOCK" });
+get("Reject tenant access to platform administration", "/platform/accounts", { status: 403 });
+post("Password reset request without email delivery", "/auth/forgot-password", { username: "{{owner_username}}", business_code: "{{business_code}}" }, { auth: false, status: 200, note: "Demo owner has no email, so this exercises the privacy-preserving response without sending messages. See optional email/reset requests for a full token flow." });
+post("Legacy reset request", "/auth/request-reset/{{owner_username}}", undefined, { auth: false, status: 200 });
+post("Reject invalid reset token", "/auth/reset-password", { token: "invalid-demo-token-with-at-least-sixteen-characters", new_password: "{{demo_password}}" }, { auth: false, status: 400, errorCode: "INVALID_RESET_TOKEN" });
+
+group("14 Optional external integrations (skipped by default)");
+post("Complete password reset with an actual token", "/auth/reset-password", { token: "{{reset_token}}", new_password: "{{demo_password}}" }, { auth: false, status: 200, optional: "reset", note: "Supply the single-use token from the reset link (valid for 15 minutes). Successful reset invalidates existing sessions. The test suite verifies the complete flow with an intercepted test email." });
+post("Create Stripe test checkout session", "/subscription/checkout", { plan_key: "{{stripe_plan_key}}" }, { status: 200, optional: "stripe", capture: { checkout_url: "checkout_url" }, note: "Requires a Stripe test API key and an active public plan with a real test price ID. Creates a checkout link; does not complete or charge a payment." });
+post("Create Stripe test customer portal session", "/subscription/portal", undefined, { status: 200, optional: "stripe", capture: { portal_url: "portal_url" }, note: "Requires Stripe test credentials, a customer created by checkout, and portal configuration." });
+post("Accept a correctly signed harmless Stripe test event", "/subscription/webhook", { id: "evt_postman_{{run_id}}", object: "event", type: "demo.verification", data: { object: {} } }, { auth: false, status: 200, optional: "webhook", signWebhook: true, note: "Uses a fresh HMAC signature and a harmless unhandled event type. Set stripe_webhook_secret to the actual test signing secret." });
+
+module.exports = { steps };
