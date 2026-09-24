@@ -42,7 +42,10 @@ const schema = z
     STRIPE_SECRET_KEY: optionalString,
     STRIPE_WEBHOOK_SECRET: optionalString,
 
-    STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
+    STORAGE_DRIVER: z.enum(["imagekit", "local", "s3"]).default("imagekit"),
+    IMAGEKIT_PRIVATE_KEY: optionalString,
+    IMAGEKIT_PUBLIC_KEY: optionalString,
+    IMAGEKIT_URL_ENDPOINT: optionalString,
     STORAGE_LOCAL_DIR: z.string().default("storage"),
     LEGACY_UPLOADS_DIR: z.string().default("uploads"),
     FILE_SIGNING_SECRET: optionalString,
@@ -64,6 +67,12 @@ const schema = z
     AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
   })
   .superRefine((env, ctx) => {
+    if (env.STORAGE_DRIVER === "imagekit") {
+      if (!env.IMAGEKIT_PRIVATE_KEY) ctx.addIssue({ code: "custom", path: ["IMAGEKIT_PRIVATE_KEY"], message: "is required when STORAGE_DRIVER=imagekit" });
+      if (!env.IMAGEKIT_URL_ENDPOINT || !/^https:\/\/[\w.-]+(?:\/[^?#]*)?$/.test(env.IMAGEKIT_URL_ENDPOINT)) {
+        ctx.addIssue({ code: "custom", path: ["IMAGEKIT_URL_ENDPOINT"], message: "must be an HTTPS ImageKit URL endpoint without query parameters" });
+      }
+    }
     if (env.NODE_ENV === "production") {
       if (env.JWT_SECRET.length < 32) {
         ctx.addIssue({ code: "custom", path: ["JWT_SECRET"], message: "must be at least 32 characters in production" });
