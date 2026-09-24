@@ -1,0 +1,398 @@
+[
+  {
+    "file": "mobile-app/src/api/http.ts",
+    "sha256": "541072ab596ec000024bb772d222a0713c48a9f694736006fb371490179a4204"
+  },
+  {
+    "file": "mobile-app/src/api/services.ts",
+    "sha256": "608ed4fe83cdf9894d8e13cac4cf006f4de0a9ebed47240ca8a496b64d0a018c"
+  },
+  {
+    "file": "mobile-app/src/components/AddButton.tsx",
+    "sha256": "0dc16c543d291bf526d981621af5142d58487ba1f865deb606e213b07c60cfa1"
+  },
+  {
+    "file": "mobile-app/src/components/BatchReturnModal.tsx",
+    "sha256": "36a170cccbb44913985f333bc7a62aceb61228239af761d1335bc8f5432cb065"
+  },
+  {
+    "file": "mobile-app/src/components/ConfirmDialog.tsx",
+    "sha256": "ac22f3faf75e57532cafcc52af67ceff751e892e1658fa34e3f80b7cd82db041"
+  },
+  {
+    "file": "mobile-app/src/components/CustomerForm.tsx",
+    "sha256": "d954858270ef7de8ae4be8bdc69c33b976945870d6dfb78369c5e618327bc862"
+  },
+  {
+    "file": "mobile-app/src/components/CustomerPhotoCaptureModal.tsx",
+    "sha256": "f8bae768c45dee718f1dd346e550b1cc06a9f2c244895d5dd9810874888e5640"
+  },
+  {
+    "file": "mobile-app/src/components/DatePickerField.tsx",
+    "sha256": "6a79f46611395f41450e53098084006b6b1a27dafd967430b69db34eb63cb612"
+  },
+  {
+    "file": "mobile-app/src/components/DocumentCaptureModal.tsx",
+    "sha256": "ca48fbf22c9d2472cfd9ac92be6b492ae2400f424a8e6bb4d0c10f2ee51d5ab9"
+  },
+  {
+    "file": "mobile-app/src/components/EquipmentForm.tsx",
+    "sha256": "e050e88bdb99ddd91613f37065f0afaffbb1bc0b6376daf29b32f9a6b44d1966"
+  },
+  {
+    "file": "mobile-app/src/components/RentalDetailModal.tsx",
+    "sha256": "26a7a6f773f486443363364f8bf4a8b0331b79904c0d1a566ba94a467d4735bb"
+  },
+  {
+    "file": "mobile-app/src/components/ReservationConflictModal.tsx",
+    "sha256": "713f99ab0a0d40756fd5f25d079372b6a28c0da8d2d6c29f5c653c1e284edb5b"
+  },
+  {
+    "file": "mobile-app/src/components/ScreenContainer.tsx",
+    "sha256": "8ec0b05bc926ccca10bb345fcfe770b3a31268a34abed19fdb9ab4b10c503bbc"
+  },
+  {
+    "file": "mobile-app/src/components/Toast.tsx",
+    "sha256": "a2404ed07578c09f38ca7b0c202f1e98bbc31e3635889365107e84c977075b7b"
+  },
+  {
+    "file": "mobile-app/src/components/ZoomableImage.tsx",
+    "sha256": "50a9de480212b62a61ee4c684b9aea52e85238e6cf6947b6ef4742b857daa8b0"
+  },
+  {
+    "file": "mobile-app/src/components/animations.tsx",
+    "sha256": "2d48d74ac4220d447a30d0e629134edf932b2b75036170b794d271d37f3df7fd"
+  },
+  {
+    "file": "mobile-app/src/components/invoice/InvoiceActionBar.tsx",
+    "sha256": "43da361ea1c41fed1f3108b20251a64ee23ad8e12ba63561f7c6cc64de5c3653"
+  },
+  {
+    "file": "mobile-app/src/components/invoice/InvoiceChargesSummary.tsx",
+    "sha256": "86cfc1d78f9b795c4d818d1c4c192847c967a15503e76c4fbe6f441cc46a57a8"
+  },
+  {
+    "file": "mobile-app/src/components/invoice/InvoiceCustomerBlock.tsx",
+    "sha256": "fc6221ed939f42079d5591ab55b1c219f8e5f0687c499a5d5ce96ed8426de50e"
+  },
+  {
+    "file": "mobile-app/src/components/invoice/InvoiceFooter.tsx",
+    "sha256": "2c8e2710738af65a0756ca19c87516affb624c3e807ef672e512d6a6257735b7"
+  },
+  {
+    "file": "mobile-app/src/components/invoice/InvoiceHeader.tsx",
+    "sha256": "c746da5a473c68f665ff41cedc481ba741aa6bb1b61c50865e7e159df93eb4c1"
+  },
+  {
+    "file": "mobile-app/src/components/invoice/InvoiceItemsTable.tsx",
+    "sha256": "f7de5f2e0a32690f17af288c47c283ecd3913ca60a39cc827409a3ccb8063122"
+  },
+  {
+    "file": "mobile-app/src/components/ui/Avatar.tsx",
+    "sha256": "0b6f87373e16f131a5c2819fbf52a95b44d4ced8016c92a080ed9634c4c2338c"
+  },
+  {
+    "file": "mobile-app/src/components/ui/Badge.tsx",
+    "sha256": "732cc5eece32f4d198a31688014994fdc82ae394c7a67253ec7007543f29e0f1"
+  },
+  {
+    "file": "mobile-app/src/components/ui/BottomSheet.tsx",
+    "sha256": "d3a04f7b108804bd3b00e9d3923516f8e3d201e130712456977476ced167f581"
+  },
+  {
+    "file": "mobile-app/src/components/ui/Button.tsx",
+    "sha256": "dc293255b5d9acc7ea9181da8da238f60300cc1696524a1a7cec5277730e6851"
+  },
+  {
+    "file": "mobile-app/src/components/ui/Card.tsx",
+    "sha256": "778412f1a55860c76ea3c1644bf8f2fdb1e3ce82d2adc231c801af1f169f41ec"
+  },
+  {
+    "file": "mobile-app/src/components/ui/EmptyState.tsx",
+    "sha256": "16e244d8fcfc3a82e8c4acf7fd3cd65b4e13c98cd9b4a5d8b0d3a372e6f90ec9"
+  },
+  {
+    "file": "mobile-app/src/components/ui/Input.tsx",
+    "sha256": "2711262aabc4befad66a2f9632e4c5a26d3e4d723cc5beed74c938eb59af1a79"
+  },
+  {
+    "file": "mobile-app/src/components/ui/SearchBar.tsx",
+    "sha256": "50b68ef2afc4de6d58683fda2dd420d3359096c9b16a3d3a8bdae48d2d0f64db"
+  },
+  {
+    "file": "mobile-app/src/components/ui/SkeletonBox.tsx",
+    "sha256": "4da5fd96e271cea0140e1fc560d1eb28fa116d448b18005e099584775d41342b"
+  },
+  {
+    "file": "mobile-app/src/components/ui/Toast.tsx",
+    "sha256": "3202ec005f03973fd481742e278a575e3f4ad52325b245ac65076389cf9b712f"
+  },
+  {
+    "file": "mobile-app/src/db/backup.ts",
+    "sha256": "82d2fec37f969e1d193d142b88a927d19488c9478f6bce8b18cf93fc8c4ebd99"
+  },
+  {
+    "file": "mobile-app/src/db/database.ts",
+    "sha256": "72fc5783c4cdc380ec43e87050f84e61a9913314ec67df3f47700e678f2b8801"
+  },
+  {
+    "file": "mobile-app/src/db/migrations.ts",
+    "sha256": "8928de05787e907b51f1c0ff432bca178d065bd43679b1b4911a2cadeab193fa"
+  },
+  {
+    "file": "mobile-app/src/db/repositories/categories.ts",
+    "sha256": "03ea76d03599a574831cd9cda09c3a8ae3f933b59b7cd4b5053f556d6ffeec06"
+  },
+  {
+    "file": "mobile-app/src/db/repositories/customers.ts",
+    "sha256": "85b705bacf9af781084acc1c6ce09e01fa535677bbf5d26a391e12923a9ac4b8"
+  },
+  {
+    "file": "mobile-app/src/db/repositories/equipment.ts",
+    "sha256": "0079589a5e5f2e808bf35af137d0f5bbc0fb8dc0f13c92006217022ed70f2a22"
+  },
+  {
+    "file": "mobile-app/src/db/repositories/expenses.ts",
+    "sha256": "ac52f9de903516ca00cde53c9350d0adcc5524a0f070496ff99aef40d714b922"
+  },
+  {
+    "file": "mobile-app/src/db/repositories/inventory.ts",
+    "sha256": "ba3d7cc52c7f0bebcc47008700d3e2f3866219a6df997ea1fbd363ad9906c2c8"
+  },
+  {
+    "file": "mobile-app/src/db/repositories/localUsers.ts",
+    "sha256": "7e249dd9b8a0c81a0ca62cc665cf6537aa72b134166fa3aa63322531af250711"
+  },
+  {
+    "file": "mobile-app/src/db/repositories/rentals.ts",
+    "sha256": "218ea66b8022f19fdcebbd83c4b5e3257fbd1d05c782c4804c8572f48b580bc5"
+  },
+  {
+    "file": "mobile-app/src/db/repositories/settings.ts",
+    "sha256": "5b01a88f3244bdea042f5cecb18d206c64d7254c6c9928ae2ce9d3923166d257"
+  },
+  {
+    "file": "mobile-app/src/hooks/useAccountPlan.ts",
+    "sha256": "aeed4466d9841159323bef959cdeed758e47263e37ca977e5ae003473ee45e17"
+  },
+  {
+    "file": "mobile-app/src/hooks/useBottomSafeSpacing.ts",
+    "sha256": "376d7095825d113968ba539a587badb3a4689b302f75a8d4c950282a8c9ea3a2"
+  },
+  {
+    "file": "mobile-app/src/navigation/MainTabs.tsx",
+    "sha256": "f98ff01c1743dda5b600afe1f8b34c2db00075c47be18d33bf2760068c2e7509"
+  },
+  {
+    "file": "mobile-app/src/navigation/RootNavigator.tsx",
+    "sha256": "3934fa265c40c29332f9830a56a3b064f72d083ff18bca22870d95f477c512ef"
+  },
+  {
+    "file": "mobile-app/src/navigation/types.ts",
+    "sha256": "ed0b80d160e82115c20b2dd461c09521f6152c4360f10db60f8ac506b414d5f2"
+  },
+  {
+    "file": "mobile-app/src/screens/AccountStatusScreen.tsx",
+    "sha256": "723ad1045e666f387822165dff030a6bb18dcc3129c093ece87c2d71831691c0"
+  },
+  {
+    "file": "mobile-app/src/screens/AddRentalScreen.tsx",
+    "sha256": "ce3bd28ed492ca14b5a56cbade26ba5091fc5b249753491e066c0c9644ff24f5"
+  },
+  {
+    "file": "mobile-app/src/screens/CompanySettingsScreen.tsx",
+    "sha256": "8b798c5f54704deaf745eede5aaccef236e7373871bd510a93533ceb6d202ca2"
+  },
+  {
+    "file": "mobile-app/src/screens/CustomerDetailScreen.tsx",
+    "sha256": "44c4dd65ada67fd3b931a5676b010239088b38d2d3c38e47c804ff673aeb5a32"
+  },
+  {
+    "file": "mobile-app/src/screens/CustomersScreen.tsx",
+    "sha256": "0da0ef393e780a5d9360cc20d77e4269dd079a55f16879f42503f4f79a0932ec"
+  },
+  {
+    "file": "mobile-app/src/screens/DamagedScreen.tsx",
+    "sha256": "5d687c52b7b48f64b91bf33dc3a2b9be6f98c22de348e0ccbad722780a43fcf0"
+  },
+  {
+    "file": "mobile-app/src/screens/DashboardScreen.tsx",
+    "sha256": "7474eca608ca431d672af2ef3e8057bda9d156970b952476006cdacfe061a17b"
+  },
+  {
+    "file": "mobile-app/src/screens/EquipmentDetailScreen.tsx",
+    "sha256": "2d21bd67a099375e724f16e65429f3bc54c83a6cb01e71884a8e07480f57c8b5"
+  },
+  {
+    "file": "mobile-app/src/screens/ExpensesScreen.tsx",
+    "sha256": "fbc3174e9ac35d1dc93de55d2a86053b5950bfefe88b14383940bb09f10d8e43"
+  },
+  {
+    "file": "mobile-app/src/screens/HomeScreen.tsx",
+    "sha256": "c2dececd3a384f42d9b145382b3e2376992f172f9111bf03754ea3a23cf67abb"
+  },
+  {
+    "file": "mobile-app/src/screens/InventoryScreen.tsx",
+    "sha256": "265fa2fd0259e3ab0593b680e65e2f1a65a192c3512314db0845f1b9e821d8e6"
+  },
+  {
+    "file": "mobile-app/src/screens/InvoiceListScreen.tsx",
+    "sha256": "70ad9c8a2b516546d89745c24d750baaa6ff06abc09b43197c92bf4cb3c38098"
+  },
+  {
+    "file": "mobile-app/src/screens/InvoiceScreen.tsx",
+    "sha256": "cf3738e16fb14c841137751083529ce48e6c6c61c1a1e284833f3f213bbe20a6"
+  },
+  {
+    "file": "mobile-app/src/screens/LoginScreen.tsx",
+    "sha256": "7a4bd6d9e9c1493fcaa403dcc6b7448f7af2f7fb8704bb19c77f18a6278ca723"
+  },
+  {
+    "file": "mobile-app/src/screens/MasterScreen.tsx",
+    "sha256": "879da7fbe36c337e6b239966022095fd0fb97112658cbc92b4e0eb5b1c900ffb"
+  },
+  {
+    "file": "mobile-app/src/screens/MoreScreen.tsx",
+    "sha256": "37e9961eba791a6cda45e3766e70ce283fb05ee3d1bda086c4b3fbb43a162061"
+  },
+  {
+    "file": "mobile-app/src/screens/RentalFormScreen.tsx",
+    "sha256": "8a89e9d2845b004b3d067508a1ff07c6b61ef3b9fd6b8dc1a0b2c0d24ea33879"
+  },
+  {
+    "file": "mobile-app/src/screens/RentalsScreen.tsx",
+    "sha256": "f0e25692daaa82f2f2ad4d9089619149c59d231677e98a84399d0fdd3609b136"
+  },
+  {
+    "file": "mobile-app/src/screens/ReportsScreen.tsx",
+    "sha256": "97fc4ce61ce356e7af7fcea27eb9b29b8f537318a3f2add98d87ff8dedfb7e83"
+  },
+  {
+    "file": "mobile-app/src/screens/SignupScreen.tsx",
+    "sha256": "82e7948e07ae75b723191568041f586c94b8b5a280d13a5dcfc11f1b3eaae2b0"
+  },
+  {
+    "file": "mobile-app/src/storage/files.ts",
+    "sha256": "2a417fb3c858f62856607d604758f66f0d34c1c07312aa878e635b788e0e0e5a"
+  },
+  {
+    "file": "mobile-app/src/store/authStore.ts",
+    "sha256": "d0c013725f012facfa60041af846977caee3180f3458041a691ddfc8a87fa4f5"
+  },
+  {
+    "file": "mobile-app/src/store/themeStore.ts",
+    "sha256": "bb9e758a24fae01f15679f2137d9a0e1aada379cb80693da1c3714e333d3c3d4"
+  },
+  {
+    "file": "mobile-app/src/sync/localStore.ts",
+    "sha256": "e52b5f3bca0ffbcfd3f805b435a9e4b2f0c25da4b679b5651c0f4612346d50ef"
+  },
+  {
+    "file": "mobile-app/src/sync/service.ts",
+    "sha256": "ac1bb6421f8b463680ab4b0eb57bfca2e23c0ef3617ac8139221979e78957430"
+  },
+  {
+    "file": "mobile-app/src/sync/types.ts",
+    "sha256": "ff0c655236132ec6d39e17f629dae2ac3a3656554d031230ddbd47883f9e4970"
+  },
+  {
+    "file": "mobile-app/src/theme.ts",
+    "sha256": "45d53a26c112f52046d7187a8d3b52305b86f10e11f6916f31fa53d89b4ea3ec"
+  },
+  {
+    "file": "mobile-app/src/types/models.ts",
+    "sha256": "b3924e0f26c546f859181b1afde4f2532705de84d07bfd6ab0a350424ee542db"
+  },
+  {
+    "file": "mobile-app/src/utils/dailyRentalReport.ts",
+    "sha256": "4148bb8018b24d6e571a0278774dca1f67f22393793787d1ddc5c5af8b5f6afa"
+  },
+  {
+    "file": "mobile-app/src/utils/equipment.ts",
+    "sha256": "3eb9bc54390c33801843e2e5b8790a9608f1021a9f074aa679470843601d11c5"
+  },
+  {
+    "file": "mobile-app/src/utils/format.ts",
+    "sha256": "ec2ac3cd2b21769ae28ec5eaeded4b018af83a5af79b134cdc65e6d53bb38baf"
+  },
+  {
+    "file": "mobile-app/src/utils/invoicePdf.ts",
+    "sha256": "4a488f642fd699a737441a731dd041064969954682cd25dc1feebac6d89457a7"
+  },
+  {
+    "file": "mobile-app/src/utils/media.ts",
+    "sha256": "e26d9135dd56cb5cbc2a282dfd04ce25a62696a40ec9772b98d06f5ca4e95e2a"
+  },
+  {
+    "file": "mobile-app/src/utils/passwords.ts",
+    "sha256": "026e8574f574e4caef8406aca250866d8f22bbd4f36097795357981708faaf65"
+  },
+  {
+    "file": "mobile-app/src/utils/returnCalculations.ts",
+    "sha256": "e61b1c0a1f39fd99a0aa43825aa43c2054c23918ff1f774b0dbba866ccfa508b"
+  },
+  {
+    "file": "mobile-app/src/utils/settingsKeys.ts",
+    "sha256": "f8465ee0d29e3f9e30deaf1d24558640a5bf0ab6843d8043abc0e109977ffa72"
+  },
+  {
+    "file": "mobile-app/App.tsx",
+    "sha256": "6faca26ee271e75f47e2c4d60bd0f2c1abaa14b38f4a498eb4963a134ed5f687"
+  },
+  {
+    "file": "mobile-app/index.ts",
+    "sha256": "ff54bc1bfe93992b08b64a0f746407034660d418b24901abe839977385c878dc"
+  },
+  {
+    "file": "mobile-app/package.json",
+    "sha256": "a2f741dc338e81868f1bcae958e9541bc844b79d9f9932c16860663672250ea0"
+  },
+  {
+    "file": "mobile-app/app.json",
+    "sha256": "e6c48e334e63e490701ce1787feb4decfb011e61487218e4041f9e78c8d322cc"
+  },
+  {
+    "file": "mobile-app/tsconfig.json",
+    "sha256": "87fcc3c6ce87e72f68938bde25dd3f564b6930a4a5cbaa8ff4aa59283ef4aa5e"
+  },
+  {
+    "file": "mobile-app/assets/NBlogo.png",
+    "sha256": "4b7bfb8eac3b9ab58e70a9c34130ae4f1a9f881882f674af604c05c14eb26f60"
+  },
+  {
+    "file": "mobile-app/assets/android-icon-background.png",
+    "sha256": "fb139c2dee362ebf2070e23b96da6fc0d43f8492de38b8af1fd7223e19b5861d"
+  },
+  {
+    "file": "mobile-app/assets/android-icon-foreground.png",
+    "sha256": "9e3d0315a33c6799de601dd34cd8bf8cc3a8d16f3bf75592baec2ceb7240b391"
+  },
+  {
+    "file": "mobile-app/assets/android-icon-monochrome.png",
+    "sha256": "6371fc2c12e33ad2215a86c281db3d682a81bebe7c957a842c13b8bf00cceb83"
+  },
+  {
+    "file": "mobile-app/assets/company-adaptive-foreground.png",
+    "sha256": "e485867b89489ebc8d7eb475a88a219a1981b3ec5bcac13431630db8507a0eb1"
+  },
+  {
+    "file": "mobile-app/assets/company-adaptive-monochrome.png",
+    "sha256": "e485867b89489ebc8d7eb475a88a219a1981b3ec5bcac13431630db8507a0eb1"
+  },
+  {
+    "file": "mobile-app/assets/company-icon.png",
+    "sha256": "4791fcee32372948e2c12ba8b40212e32d3d0ea8d7c20183860aa8ba0ad5a360"
+  },
+  {
+    "file": "mobile-app/assets/favicon.png",
+    "sha256": "a4e030697a7571b3e95d31860e4da55d2f98e5e861e2b55e414f45a8556828ba"
+  },
+  {
+    "file": "mobile-app/assets/icon.png",
+    "sha256": "119462bb78eb240a65c869fc067ee599639b3cb5a41953f25c07b17d2a8c7e0f"
+  },
+  {
+    "file": "mobile-app/assets/splash-icon.png",
+    "sha256": "5f4c0a732b6325bf4071d9124d2ae67e037cb24fcc9c482ef82bea742109a3b8"
+  }
+]

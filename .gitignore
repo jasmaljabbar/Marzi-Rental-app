@@ -1,0 +1,29 @@
+# Dependencies and build output
+node_modules/
+dist/
+build/
+coverage/
+.dart_tool/
+.gradle/
+.kotlin/
+
+# Secrets — never commit real environment files
+.env
+.env.*
+!.env.example
+
+# User-uploaded files (may contain customer PII)
+nodejs-backend/uploads/*
+!nodejs-backend/uploads/.gitkeep
+nodejs-backend/storage/
+nodejs-backend/.dev-db/
+
+# Local machine files
+flutter-app/android/local.properties
+*.log
+.DS_Store
+.idea/
+*.iml
+playwright-report/
+test-results/
+!migration/test-results/

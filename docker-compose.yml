@@ -1,0 +1,56 @@
+# Local full stack: MongoDB (single-node replica set, so transactions work
+# exactly as on Atlas), the API, the web dashboard and a mail catcher for
+# password-reset emails.
+#
+#   docker compose up --build
+#   API  http://localhost:5000   Web  http://localhost:8080   Mail  http://localhost:8025
+#
+# First run: docker compose exec api npm run seed:plans
+#            docker compose exec api npm run seed:super-admin
+services:
+  mongo:
+    image: mongo:8.0
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    ports: ["27017:27017"]
+    volumes: ["mongo-data:/data/db"]
+    healthcheck:
+      # Initiates the replica set on first start, then reports healthy.
+      test: ["CMD", "mongosh", "--quiet", "--eval", "try { rs.status().ok } catch (e) { rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'mongo:27017'}]}).ok }"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+
+  mailpit:
+    image: axllent/mailpit:v1.21
+    ports: ["8025:8025"]
+
+  api:
+    build: ./nodejs-backend
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      MONGODB_URI: mongodb://mongo:27017/rental?replicaSet=rs0
+      JWT_SECRET: ${JWT_SECRET:-local-development-secret-change-me-0123456789}
+      CORS_ORIGINS: http://localhost:8080
+      PUBLIC_API_URL: http://localhost:5000
+      FRONTEND_URL: http://localhost:8080
+      SMTP_URL: smtp://mailpit:1025
+      MAIL_FROM: Rental Manager <no-reply@localhost>
+      # Local convenience only; production runs migrations explicitly.
+      REQUIRE_MIGRATIONS: "false"
+    ports: ["5000:5000"]
+    volumes: ["api-files:/data"]
+
+  web:
+    build:
+      context: ./web-dashboard
+      args:
+        VITE_API_URL: http://localhost:5000/
+    depends_on: [api]
+    ports: ["8080:8080"]
+
+volumes:
+  mongo-data:
+  api-files:

@@ -1,0 +1,144 @@
+{
+  "kind": "React Native source characterization, NOT Flutter parity or device tests",
+  "clock": "2026-09-14T06:30:00.000Z",
+  "results": [
+    {
+      "name": "Same instant billed at least one day",
+      "status": "PASS"
+    },
+    {
+      "name": "Exactly 24 hours is one day",
+      "status": "PASS"
+    },
+    {
+      "name": "24 hours plus 1ms is two days",
+      "status": "PASS"
+    },
+    {
+      "name": "Future start clamps to one day",
+      "status": "PASS"
+    },
+    {
+      "name": "Invalid date renders dash",
+      "status": "PASS"
+    },
+    {
+      "name": "Available stock subtracts damage and clamps",
+      "status": "PASS"
+    },
+    {
+      "name": "Missing stock becomes zero",
+      "status": "PASS"
+    },
+    {
+      "name": "Batch gross uses current equipment rate",
+      "status": "PASS"
+    },
+    {
+      "name": "Batch weighted discount and payment",
+      "status": "PASS"
+    },
+    {
+      "name": "Overpayment cannot exceed allocated revenue",
+      "status": "PASS"
+    },
+    {
+      "name": "Missing equipment contributes zero rate",
+      "status": "PASS"
+    },
+    {
+      "name": "HTTP POST sends Bearer token and JSON",
+      "status": "PASS"
+    },
+    {
+      "name": "Empty successful body becomes object",
+      "status": "PASS"
+    },
+    {
+      "name": "409 preserves structured conflict payload",
+      "status": "PASS"
+    },
+    {
+      "name": "Non-JSON failure uses HTTP status",
+      "status": "PASS"
+    }
+  ],
+  "returnFixture": {
+    "rentals": [
+      {
+        "id": "r1",
+        "equipment_id": "e1",
+        "quantity": 2,
+        "rented_at": "2026-09-13T06:29:59.999Z",
+        "advance_amount": 20
+      },
+      {
+        "id": "r2",
+        "equipment_id": "e2",
+        "quantity": 1,
+        "rented_at": "2026-09-14T06:30:00.000Z",
+        "advance_amount": 0
+      }
+    ],
+    "equipment": [
+      {
+        "id": "e1",
+        "rent_per_day": 25
+      },
+      {
+        "id": "e2",
+        "rent_per_day": 20
+      }
+    ],
+    "discount": 10,
+    "paidNow": 45,
+    "expected": [
+      {
+        "rental": {
+          "id": "r1",
+          "equipment_id": "e1",
+          "quantity": 2,
+          "rented_at": "2026-09-13T06:29:59.999Z",
+          "advance_amount": 20
+        },
+        "equipment": {
+          "id": "e1",
+          "rent_per_day": 25
+        },
+        "dailyRate": 25,
+        "quantity": 2,
+        "days": 2,
+        "gross": 100,
+        "advance": 20,
+        "revenueBeforeDiscount": 80,
+        "discount": 8,
+        "paidNow": 36,
+        "revenue": 72,
+        "pending": 36
+      },
+      {
+        "rental": {
+          "id": "r2",
+          "equipment_id": "e2",
+          "quantity": 1,
+          "rented_at": "2026-09-14T06:30:00.000Z",
+          "advance_amount": 0
+        },
+        "equipment": {
+          "id": "e2",
+          "rent_per_day": 20
+        },
+        "dailyRate": 20,
+        "quantity": 1,
+        "days": 1,
+        "gross": 20,
+        "advance": 0,
+        "revenueBeforeDiscount": 20,
+        "discount": 2,
+        "paidNow": 9,
+        "revenue": 18,
+        "pending": 9
+      }
+    ]
+  }
+}

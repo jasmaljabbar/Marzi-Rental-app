@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main, hardening]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: nodejs-backend } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: npm, cache-dependency-path: nodejs-backend/package-lock.json }
+      - run: npm ci
+      - run: npm run lint
+      - run: npm audit --omit=dev --audit-level=high
+      # Integration tests run against an in-memory MongoDB replica set.
+      - run: npm run test:coverage
+
+  web:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: web-dashboard } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            web-dashboard/package-lock.json
+            nodejs-backend/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - name: Install API dependencies for end-to-end tests
+        run: npm ci
+        working-directory: nodejs-backend
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+        env: { CI: "true" }
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with: { name: playwright-report, path: web-dashboard/playwright-report }
+
+  flutter:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: flutter-app } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable, cache: true }
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+      - run: flutter build web --dart-define=API_URL=https://api.example.com/

@@ -1,0 +1,22 @@
+// Registers every Mongoose model (used by index sync and scripts).
+require("./Account");
+require("./Shop");
+require("./User");
+require("./Subscription");
+require("./Plan");
+require("./Counter");
+require("./Category");
+require("./Equipment");
+require("./Customer");
+require("./Rental");
+require("./Payment");
+require("./Expense");
+require("./RecurringExpenseTemplate");
+require("./InventoryTransaction");
+require("./MaintenanceLog");
+require("./EquipmentSale");
+require("./Reservation");
+require("./ReservationNotice");
+require("./Setting");
+require("./FileObject");
+require("./Migration");
