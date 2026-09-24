@@ -2,6 +2,8 @@
 
 Node 24 + Express 4 + MongoDB (Mongoose 8). Multi-tenant REST API for the web dashboard and the mobile app.
 
+For Vercel hosting, see [the Vercel setup and troubleshooting guide](VERCEL.md).
+
 ## Run locally
 
 Quickest way, with no Docker and no MongoDB install:

@@ -5,3 +5,4 @@ uploads/*
 .dev-db/
 .vercel
 .postman
+.env*
