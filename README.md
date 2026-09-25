@@ -41,7 +41,7 @@ For the Android emulator use `API_URL=http://10.0.2.2:5000/`; see [flutter-app/R
 | API | `cd nodejs-backend && npm test` | 104 integration tests against an in-memory MongoDB replica set (tenancy, auth, money, stock, uploads and photo limits, reports, subscriptions, migrations). `npm run test:coverage` for coverage (about 94% of lines). |
 | Web | `cd web-dashboard && npm test` | 52 unit and component tests (Vitest, Testing Library, MSW) |
 | Web end-to-end | `cd web-dashboard && npm run test:e2e` | Playwright against the real API and an in-memory database: full rental journey, customer photos and multi-photo equipment, tenant isolation, staff permissions, phone-size layout |
-| Mobile | `cd flutter-app && flutter test` | 34 unit and widget tests |
+| Mobile | `cd flutter-app && flutter test` | 35 unit and widget tests |
 
 CI runs all of the above ([.github/workflows/ci.yml](.github/workflows/ci.yml)).
 

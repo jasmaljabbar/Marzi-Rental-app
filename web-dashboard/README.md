@@ -13,6 +13,8 @@ npm install
 npm run dev             # http://localhost:5174
 ```
 
+Without `VITE_API_URL` the app uses the hosted API, `https://marzi-api.vercel.app/`.
+
 ## Scripts
 
 | Script | Purpose |

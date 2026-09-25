@@ -28,8 +28,8 @@ test("a customer's photo shows in the list, on the detail page and in the edit f
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Name").fill("Jasmal");
   await dialog.getByLabel("Phone").fill("9876500001");
-  await dialog.getByLabel("Choose Photo files").setInputFiles(png("jasmal.png"));
-  await expect(dialog.getByRole("img", { name: "Photo 1" })).toBeVisible();
+  await dialog.getByLabel("Choose Profile photo files").setInputFiles(png("jasmal.png"));
+  await expect(dialog.getByRole("img", { name: "Profile photo 1" })).toBeVisible();
   await dialog.getByRole("button", { name: "Add customer" }).click();
   await expect(dialog).toBeHidden();
 
@@ -49,7 +49,7 @@ test("a customer's photo shows in the list, on the detail page and in the edit f
   await expectPhotoLoaded(page.getByRole("main").locator("[data-state]").first());
   await page.getByRole("button", { name: "Edit" }).click();
   const edit = page.getByRole("dialog");
-  const photo = edit.getByRole("img", { name: "Photo 1" });
+  const photo = edit.getByRole("img", { name: "Profile photo 1" });
   await expect(photo).toBeVisible();
   expect(await photo.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBeGreaterThan(0);
 });

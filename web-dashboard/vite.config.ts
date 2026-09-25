@@ -19,5 +19,7 @@ export default defineConfig({
     include: ["src/**/*.test.{ts,tsx}"],
     css: false,
     restoreMocks: true,
+    // Unit tests mock the API at this address (src/test/server.ts), not the hosted one.
+    env: { VITE_API_URL: "http://localhost:5000/" },
   },
 });

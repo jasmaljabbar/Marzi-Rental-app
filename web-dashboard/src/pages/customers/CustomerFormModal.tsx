@@ -75,15 +75,14 @@ export function CustomerFormModal({ open, onClose, customer, onSaved }: Customer
         <Textarea label="Address" value={address} onChange={(e) => setAddress(e.target.value)} rows={2} />
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <ImageUpload label="Photo" kind="customer_photo" value={photoUrl} onChange={setPhotoUrl} max={1} onBusyChange={(busy) => uploads.setBusy("photo", busy)} />
-          <ImageUpload
-            label="ID document (private)"
-            kind="customer_doc"
-            value={docUrl}
-            onChange={setDocUrl}
-            max={1}
-            onBusyChange={(busy) => uploads.setBusy("doc", busy)}
-          />
+          <div>
+            <ImageUpload label="Profile photo" kind="customer_photo" value={photoUrl} onChange={setPhotoUrl} max={1} onBusyChange={(busy) => uploads.setBusy("photo", busy)} />
+            <p className="mt-1 text-xs text-slate-400">Shown next to the customer in lists.</p>
+          </div>
+          <div>
+            <ImageUpload label="ID document" kind="customer_doc" value={docUrl} onChange={setDocUrl} max={1} onBusyChange={(busy) => uploads.setBusy("doc", busy)} />
+            <p className="mt-1 text-xs text-slate-400">Kept private. Never used as the customer's picture.</p>
+          </div>
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
