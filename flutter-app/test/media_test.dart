@@ -168,6 +168,42 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
+  testWidgets('Customer form shows the profile photo first and keeps it apart from the ID document', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(420, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    Map<String, dynamic>? saved;
+    final api = ApiClient(
+      token: () => 'fixture',
+      client: MockClient((request) async {
+        saved = Map<String, dynamic>.from(jsonDecode(request.body) as Map);
+        return http.Response(jsonEncode({'id': 'c1', ...saved!}), 200);
+      }),
+    );
+    final app = AppController(store: MemoryStore(), api: api)
+      ..ready = true
+      ..token = 'fixture';
+    const doc = 'https://api.example.com/files/t/a/customer_doc/d1.webp?exp=1&sig=s';
+    final customer = Record({'id': 'c1', 'name': 'Jasmal', 'phone': '111', 'photo_url': full, 'doc_url': doc});
+    await tester.pumpWidget(
+      AppScope(
+        controller: app,
+        child: MaterialApp(theme: rentalTheme(Brightness.light), home: Scaffold(body: SingleChildScrollView(child: CustomerForm(initial: customer)))),
+      ),
+    );
+
+    expect(tester.widget<PersonAvatar>(find.byKey(const Key('customer-form-avatar'))).url, full);
+    expect(tester.getTopLeft(find.text('Profile photo')).dy, lessThan(tester.getTopLeft(find.text('ID document (optional)')).dy));
+    expect(find.text('Kept private. Never used as the customer\'s picture.'), findsOneWidget);
+    expect(find.text('Change photo'), findsOneWidget);
+    expect(find.text('Replace document'), findsOneWidget);
+
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(saved?['photo_url'], full);
+    expect(saved?['doc_url'], doc);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   group('upload rules', () {
     test('selection size', () {
       expect(selectionProblem(1, 4, 4), isNull);

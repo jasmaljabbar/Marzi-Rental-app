@@ -6,7 +6,7 @@ Mobile app for Rental Manager (Android, iOS, web). It replaces the earlier React
 
 The app includes startup health checking and splash behavior, persisted login/signup/password reset, seven-tab navigation, theme selection, customers and documents/photos, a responsive customer story strip on Home that reuses the existing customer-selection flow, equipment/categories/stock, damage/repair/scrap/sales, server-backed reservation drafts and conflicts, both rental-creation paths, rental editing, individual and proportional batch returns, payments and due reminders, invoices and server PDF actions, expenses and receipt uploads, dashboard, reports and daily report PDF, account-plan feature gates, and company/invoice settings.
 
-The default API is `http://localhost:5000/`. Override it without editing source:
+The default API is the hosted one, `https://marzi-api.vercel.app/`. Override it without editing source:
 
 ```sh
 flutter run --dart-define=API_URL=https://your-test-api.example.com

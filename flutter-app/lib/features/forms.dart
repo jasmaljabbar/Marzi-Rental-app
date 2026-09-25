@@ -21,6 +21,7 @@ class _CustomerFormState extends State<CustomerForm> {
       address = TextEditingController(text: widget.initial?.text('address'));
   late String photo = widget.initial?.text('photo_url') ?? '',
       doc = widget.initial?.text('doc_url') ?? '';
+  bool uploading = false;
   @override
   void dispose() {
     name.dispose();
@@ -40,6 +41,42 @@ class _CustomerFormState extends State<CustomerForm> {
               ? 'Edit Customer'
               : 'New Customer',
         ),
+        // The profile photo comes first and the ID document is labelled as
+        // such, so a customer's picture isn't filed as their ID by mistake.
+        const Section('Profile photo'),
+        Row(
+          children: [
+            ListenableBuilder(
+              listenable: name,
+              builder: (_, _) => PersonAvatar(key: const Key('customer-form-avatar'), name: name.text, url: photo, size: 72),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Wrap(
+                spacing: 4,
+                children: [
+                  TextButton.icon(
+                    onPressed: uploading ? null : () => pick(false, true),
+                    icon: const Icon(Icons.photo_library_outlined),
+                    label: Text(photo.isEmpty ? 'Choose photo' : 'Change photo'),
+                  ),
+                  TextButton.icon(
+                    onPressed: uploading ? null : () => pick(true, true),
+                    icon: const Icon(Icons.photo_camera_outlined),
+                    label: const Text('Take photo'),
+                  ),
+                  if (photo.isNotEmpty)
+                    TextButton(
+                      onPressed: () => setState(() => photo = ''),
+                      child: const Text('Remove photo'),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const Text('Shown next to the customer in lists.'),
+        const SizedBox(height: 12),
         Field('Name', name, required: true),
         Field(
           'Phone',
@@ -47,45 +84,43 @@ class _CustomerFormState extends State<CustomerForm> {
           required: true,
           keyboardType: TextInputType.phone,
         ),
-        const Section('Document (Optional)'),
+        Field('Address', address, multiline: true),
+        const Section('ID document (optional)'),
+        const Text('Kept private. Never used as the customer\'s picture.'),
+        const SizedBox(height: 8),
         if (doc.isNotEmpty) Picture(doc, height: 180),
         Wrap(
           spacing: 8,
           children: [
             TextButton.icon(
-              onPressed: () => pick(true, false),
-              icon: const Icon(Icons.camera_alt_outlined),
-              label: const Text('Take Photo'),
+              onPressed: uploading ? null : () => pick(true, false),
+              icon: const Icon(Icons.document_scanner_outlined),
+              label: const Text('Scan document'),
             ),
             TextButton.icon(
-              onPressed: () => pick(false, false),
-              icon: const Icon(Icons.upload_outlined),
-              label: Text(doc.isEmpty ? 'Upload' : 'Replace'),
+              onPressed: uploading ? null : () => pick(false, false),
+              icon: const Icon(Icons.upload_file_outlined),
+              label: Text(doc.isEmpty ? 'Upload document' : 'Replace document'),
             ),
             if (doc.isNotEmpty)
               TextButton(
                 onPressed: () => setState(() => doc = ''),
-                child: const Text('Remove'),
+                child: const Text('Remove document'),
               ),
           ],
         ),
-        Field('Address', address, multiline: true),
-        const Section('Customer photo'),
-        if (photo.isNotEmpty) Picture(photo, height: 90),
-        Wrap(
-          children: [
-            TextButton(
-              onPressed: () => pick(false, true),
-              child: const Text('Upload'),
-            ),
-            TextButton(
-              onPressed: () => pick(true, true),
-              child: const Text('Take Photo'),
-            ),
-          ],
-        ),
+        if (uploading)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: LinearProgressIndicator(),
+          ),
+        const SizedBox(height: 8),
         ActionButton('Save', () async {
           if (!formKey.currentState!.validate()) return;
+          if (uploading) {
+            toast(context, 'Wait for the upload to finish.');
+            return;
+          }
           final app = AppScope.of(context);
           final edit = widget.initial?.id.isNotEmpty == true;
           final r = await app.repo
@@ -112,6 +147,7 @@ class _CustomerFormState extends State<CustomerForm> {
     ),
   );
   Future<void> pick(bool camera, bool isPhoto) async {
+    setState(() => uploading = true);
     try {
       final result = await uploadImage(
         AppScope.of(context),
@@ -130,6 +166,8 @@ class _CustomerFormState extends State<CustomerForm> {
       }
     } catch (e) {
       if (mounted) toast(context, e);
+    } finally {
+      if (mounted) setState(() => uploading = false);
     }
   }
 }

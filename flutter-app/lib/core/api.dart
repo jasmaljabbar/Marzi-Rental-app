@@ -38,7 +38,7 @@ extension on UploadKind {
 
 String _stripTrailingSlash(String url) => url.replaceFirst(RegExp(r'/+$'), '');
 
-const apiBaseUrlDefine = String.fromEnvironment('API_URL', defaultValue: 'http://localhost:5000/');
+const apiBaseUrlDefine = String.fromEnvironment('API_URL', defaultValue: 'https://marzi-api.vercel.app/');
 
 /// The one place the app turns a file reference into a loadable URL. The API
 /// returns absolute URLs for stored files (signed when private), which pass
