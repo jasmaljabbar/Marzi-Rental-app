@@ -108,8 +108,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             if (c != null) Scrollable.ensureVisible(c);
           });
         }
-        return ListView(
-          padding: const EdgeInsets.all(16),
+        return PageList(
           children: [
             const Section('Business overview'),
             Wrap(
@@ -157,6 +156,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: 12),
             LayoutBuilder(
               builder: (context, constraints) {
+                final textScale = MediaQuery.textScalerOf(context).scale(1);
                 final columns = constraints.maxWidth >= 900
                     ? 3
                     : constraints.maxWidth >= 520
@@ -170,7 +170,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     crossAxisCount: columns,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
-                    mainAxisExtent: 126,
+                    // Padding and icon, plus value and label lines that grow
+                    // with the system font size.
+                    mainAxisExtent: 82 + 44 * textScale,
                   ),
                   itemBuilder: (_, index) => _DashboardMetric(overview[index]),
                 );
@@ -255,7 +257,12 @@ class _DashboardMetric extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleLarge,
             ),
-            Text(data.label, style: Theme.of(context).textTheme.bodySmall),
+            Text(
+              data.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
           ],
         ),
       ),
@@ -331,8 +338,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         setState(load);
         await future;
       },
-      child: ListView(
-        padding: const EdgeInsets.all(16),
+      child: PageList(
         children: [
           Wrap(
             spacing: 8,

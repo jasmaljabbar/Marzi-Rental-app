@@ -1,4 +1,4 @@
-const { z, objectId, optionalText, requiredText } = require("../lib/validate");
+const { email, z, objectId, optionalText, requiredText } = require("../lib/validate");
 const { CURRENCY_CODES } = require("../config/currencies");
 
 const username = z
@@ -8,7 +8,6 @@ const username = z
   .max(64, "must be at most 64 characters")
   .regex(/^[a-zA-Z0-9._@+-]+$/, "may only contain letters, numbers and . _ @ + -");
 const password = z.string({ error: "is required" }).min(1, "is required").max(128, "must be at most 128 characters");
-const email = z.string().trim().toLowerCase().email("must be a valid email").max(200).nullish().or(z.literal("").transform(() => null));
 const businessCode = z.string().trim().toLowerCase().max(40).optional().or(z.literal("").transform(() => undefined));
 
 const register = z.object({

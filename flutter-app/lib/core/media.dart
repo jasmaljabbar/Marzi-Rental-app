@@ -28,6 +28,7 @@ String? imageFileProblem(String name, int bytes) {
   if (ext.isNotEmpty && !acceptedImageExtensions.contains(ext)) {
     return '"$name" isn\'t a JPEG, PNG, WebP or GIF image.';
   }
+  if (bytes <= 0) return '"$name" is empty. Select another image.';
   if (bytes > maxUploadBytes) return '"$name" is too large (max ${maxUploadBytes ~/ (1024 * 1024)} MB).';
   return null;
 }

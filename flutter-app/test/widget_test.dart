@@ -41,7 +41,8 @@ void main() {
       await tester.ensureVisible(find.text('Start free trial'));
       await tester.tap(find.text('Start free trial'));
       await tester.pumpAndSettle();
-      expect(find.text('Enter your business name and a username.'), findsOneWidget);
+      expect(find.text('This field is required.'), findsNWidgets(2));
+      expect(find.text('Enter your password.'), findsOneWidget);
     },
   );
   testWidgets('Authenticated shell renders five primary destinations', (

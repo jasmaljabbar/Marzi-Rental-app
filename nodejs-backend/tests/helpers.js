@@ -130,7 +130,7 @@ async function createEquipment(owner, { name, rentPerDay = 100, stock = 5, purch
 }
 
 async function createCustomer(owner, { name, phone } = {}) {
-  const res = await owner.post("/customers").send({ name: name || unique("Customer "), phone: phone || `98${String(Date.now()).slice(-6)}${counter++}` });
+  const res = await owner.post("/customers").send({ name: name || unique("Customer "), phone: phone || `98${String(counter++).padStart(8, "0")}` });
   if (res.status !== 201) throw new Error(`customer failed: ${JSON.stringify(res.body)}`);
   return res.body;
 }

@@ -1,5 +1,5 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import '../app/controller.dart';
 import 'api.dart';
@@ -52,6 +52,7 @@ class _MultiImageFieldState extends State<MultiImageField> {
   final pending = <_Pending>[];
   String? problem;
   int nextId = 0;
+  final uploadedBytes = <String, Uint8List>{};
   // Latest list, so uploads that finish together don't overwrite each other.
   late List<String> latest = List.of(widget.urls);
 
@@ -101,10 +102,12 @@ class _MultiImageFieldState extends State<MultiImageField> {
     for (final file in picked) {
       final bytes = await file.readAsBytes();
       final issue = imageFileProblem(file.name, bytes.length);
-      if (issue == null) {
-        items.add(_Pending(nextId++, file.name, bytes));
-      } else {
+      if (issue != null) {
         problems.add(issue);
+      } else if ([...items.map((i) => i.bytes), ...pending.map((i) => i.bytes), ...uploadedBytes.values].any((b) => listEquals(b, bytes))) {
+        problems.add('"${file.name}" is already selected.');
+      } else {
+        items.add(_Pending(nextId++, file.name, bytes));
       }
     }
     if (!mounted) return;
@@ -136,7 +139,7 @@ class _MultiImageFieldState extends State<MultiImageField> {
     if (!mounted) return;
     final done = <_Pending>[];
     for (var i = 0; i < items.length; i++) {
-      if (results[i] != null && pending.contains(items[i])) done.add(items[i]);
+      if (results[i] != null && pending.contains(items[i])) { done.add(items[i]); uploadedBytes[results[i]!] = items[i].bytes; }
     }
     if (done.isEmpty) return;
     commit([...latest, for (var i = 0; i < items.length; i++) if (done.contains(items[i])) results[i]!]);
@@ -147,6 +150,7 @@ class _MultiImageFieldState extends State<MultiImageField> {
 
   void removeUrl(int index) {
     setState(() => problem = null);
+    uploadedBytes.remove(latest[index]);
     commit([...latest]..removeAt(index));
   }
 

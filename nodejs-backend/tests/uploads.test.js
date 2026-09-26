@@ -117,13 +117,13 @@ describe("image storage (P1-3)", () => {
   it("refuses file references from another business or unknown URLs", async () => {
     const other = await h.registerBusiness(app);
     const theirs = await upload(other, "customer_photo", await h.pngBuffer());
-    const stolen = await owner.post("/customers").send({ name: "X", phone: "5550001", photo_url: theirs.body.url });
+    const stolen = await owner.post("/customers").send({ name: "X", phone: "9875550001", photo_url: theirs.body.url });
     assert.equal(stolen.status, 400);
     assert.equal(stolen.body.code, "INVALID_FILE_REF");
-    const external = await owner.post("/customers").send({ name: "X", phone: "5550002", photo_url: "https://evil.example/pixel.png" });
+    const external = await owner.post("/customers").send({ name: "X", phone: "9875550002", photo_url: "https://evil.example/pixel.png" });
     assert.equal(external.status, 400);
     const wrongKind = await upload(owner, "equipment", await h.pngBuffer());
-    const misuse = await owner.post("/customers").send({ name: "X", phone: "5550003", doc_url: wrongKind.body.key });
+    const misuse = await owner.post("/customers").send({ name: "X", phone: "9875550003", doc_url: wrongKind.body.key });
     assert.equal(misuse.status, 400, "an equipment photo can't be filed as a private ID document");
   });
 

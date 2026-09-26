@@ -1,3 +1,4 @@
+const { syncFields } = require("../lib/sync");
 const Equipment = require("../models/Equipment");
 const Category = require("../models/Category");
 const Customer = require("../models/Customer");
@@ -70,6 +71,7 @@ async function createEquipment(req, input) {
       [
         {
           ...createScope(req),
+    ...syncFields(req),
           name: input.name,
           nameKey: nameKey(input.name),
           description: input.description ?? null,

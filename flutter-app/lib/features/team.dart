@@ -1,3 +1,4 @@
+import '../core/validation.dart';
 import 'package:flutter/material.dart';
 import '../app/controller.dart';
 import '../core/api.dart';
@@ -40,7 +41,7 @@ class _ChangePasswordFormState extends State<ChangePasswordForm> {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       const Section('Change my password'),
-      Field('Current password', current, obscure: true),
+      Field('Current password', current, obscure: true, required: true, maxLength: 128),
       Field('New password (min. 8 characters)', next, obscure: true),
       Field('Confirm new password', confirm, obscure: true),
       if (error.isNotEmpty) Text(error, style: TextStyle(color: Theme.of(context).colorScheme.error)),
@@ -97,8 +98,7 @@ class _TeamScreenState extends State<TeamScreen> {
       body: DataView<List<Record>>(
         future: future!,
         retry: reload,
-        builder: (members) => ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+        builder: (members) => PageList(
           children: [
             if (app.businessCode.isNotEmpty)
               Panel(children: [const Section('Business code'), SelectableText(app.businessCode), const Text('Staff may need this code to sign in.')]),
@@ -164,15 +164,16 @@ class _AddTeamMemberFormState extends State<AddTeamMemberForm> {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       const Section('Add team member'),
-      Field('Username', username),
+      Field('Username', username, required: true, validator: usernameProblem),
       Field('Temporary password (min. 8 characters)', password, obscure: true),
-      Field('Email (optional, for password resets)', email),
+      Field('Email (optional, for password resets)', email, validator: emailProblem, keyboardType: TextInputType.emailAddress),
       DropdownButtonFormField<String>(
+        isExpanded: true,
         initialValue: role,
         decoration: const InputDecoration(labelText: 'Role'),
         items: const [
-          DropdownMenuItem(value: 'staff', child: Text('Staff — rentals, returns, customers')),
-          DropdownMenuItem(value: 'admin', child: Text('Admin — everything except billing ownership')),
+          DropdownMenuItem(value: 'staff', child: Text('Staff — rentals, returns, customers', overflow: TextOverflow.ellipsis)),
+          DropdownMenuItem(value: 'admin', child: Text('Admin — everything except billing ownership', overflow: TextOverflow.ellipsis)),
         ],
         onChanged: (v) => setState(() => role = v ?? 'staff'),
       ),

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'api.dart';
 import 'models.dart';
 import 'theme.dart';
+import 'validation.dart';
 
 void toast(BuildContext context, Object message) {
   ScaffoldMessenger.of(context).showSnackBar(
@@ -51,12 +53,91 @@ Future<T?> sheet<T>(BuildContext context, Widget child) =>
             maxHeight: MediaQuery.sizeOf(c).height * .9,
           ),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: child,
+            padding: pagePadding(c, 20),
+            child: Form(child: child),
           ),
         ),
       ),
     );
+
+/// Room the extended floating action button takes above a list's end.
+const _fabClearance = 80.0;
+
+/// Padding for a scrolling page or sheet: [gap] on every side plus the
+/// system insets under it. Android 15+ draws apps edge to edge, so without
+/// this the last field or button sits under the navigation or gesture bar.
+/// An explicit ListView padding switches off the insets ListView would
+/// otherwise add, which is why they are added back here. The bottom also
+/// clears the floating action button when the enclosing Scaffold has one.
+/// Inside a Scaffold with a bottom bar, the bar owns the inset and the
+/// Scaffold reports none here.
+EdgeInsets pagePadding(BuildContext context, [double gap = 16]) {
+  final insets = MediaQuery.paddingOf(context);
+  final fab = Scaffold.maybeOf(context)?.hasFloatingActionButton ?? false;
+  return EdgeInsets.fromLTRB(
+    gap + insets.left,
+    gap + insets.top,
+    gap + insets.right,
+    gap + insets.bottom + (fab ? _fabClearance : 0),
+  );
+}
+
+/// The standard scrolling body of a screen, padded by [pagePadding]. It
+/// reads the insets from its own position, below the page's Scaffold.
+class PageList extends StatelessWidget {
+  final List<Widget> children;
+  const PageList({super.key, required this.children});
+  @override
+  Widget build(BuildContext context) =>
+      ListView(padding: pagePadding(context), children: children);
+}
+
+/// A screen's main action pinned to the bottom edge, full width and clear of
+/// the navigation or gesture bar. Use it as Scaffold.bottomNavigationBar so
+/// the body stops above it, or under an Expanded list whose MediaQuery has
+/// the bottom padding removed.
+class BottomActionBar extends StatelessWidget {
+  final Widget child;
+  const BottomActionBar({super.key, required this.child});
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final insets = MediaQuery.paddingOf(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        border: Border(top: BorderSide(color: scheme.outlineVariant)),
+      ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          16 + insets.left,
+          12,
+          16 + insets.right,
+          12 + insets.bottom,
+        ),
+        child: SizedBox(width: double.infinity, child: child),
+      ),
+    );
+  }
+}
+
+/// Keeps a decimal field to digits and one decimal point with at most
+/// [decimals] places. Keyboards that use a comma as the decimal separator
+/// type "12,5"; it becomes 12.5 rather than failing to parse as 0.
+class DecimalInputFormatter extends TextInputFormatter {
+  final int decimals;
+  const DecimalInputFormatter({this.decimals = 2});
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = newValue.text.replaceAll(',', '.');
+    return RegExp('^\\d*\\.?\\d{0,$decimals}\$').hasMatch(text)
+        ? newValue.copyWith(text: text)
+        : oldValue;
+  }
+}
 
 class Section extends StatelessWidget {
   final String title;
@@ -91,24 +172,35 @@ class Panel extends StatelessWidget {
   );
 }
 
+/// A labelled text input. [number] is for amounts that can have decimals
+/// (prices, rates, percentages); [integer] is for counts such as quantities
+/// and stock, which accept digits only.
 class Field extends StatelessWidget {
   final String label;
   final TextEditingController controller;
-  final bool number, multiline, obscure, required;
+  final bool number, integer, multiline, obscure, required;
   final ValueChanged<String>? onChanged;
   final String? helperText;
+  final String? Function(String?)? validator;
+  final int? maxLength;
+  final num min, max;
   final TextInputType? keyboardType;
   const Field(
     this.label,
     this.controller, {
     super.key,
     this.number = false,
+    this.integer = false,
     this.multiline = false,
     this.obscure = false,
     this.required = false,
     this.onChanged,
     this.helperText,
     this.keyboardType,
+    this.validator,
+    this.maxLength,
+    this.min = 0,
+    this.max = 1e10,
   });
   @override
   Widget build(BuildContext context) => Padding(
@@ -119,20 +211,26 @@ class Field extends StatelessWidget {
       obscureText: obscure,
       keyboardType:
           keyboardType ??
-          (number
+          (integer
+              ? TextInputType.number
+              : number
               ? const TextInputType.numberWithOptions(decimal: true)
               : multiline
               ? TextInputType.multiline
               : TextInputType.text),
+      inputFormatters: number ? const [DecimalInputFormatter()] : null,
+      // Number pads have no key to close them; tapping elsewhere does, so
+      // the keyboard never traps the action buttons underneath it.
+      onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
       maxLines: multiline ? 3 : 1,
       textInputAction: multiline
           ? TextInputAction.newline
           : TextInputAction.next,
-      validator: required
-          ? (value) => value == null || value.trim().isEmpty
-                ? '$label is required'
-                : null
-          : null,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
+      validator: (value) => (obscure
+          ? (required && (value == null || value.isEmpty) ? 'This field is required.' : maxLength != null && (value?.length ?? 0) > maxLength! ? 'Use at most $maxLength characters.' : null)
+          : textProblem(value, required: required, maxLength: maxLength)) ??
+          (number || integer ? numberProblem(value, integer: integer, required: required, min: min, max: max) : null) ?? validator?.call(value),
       decoration: InputDecoration(
         labelText: required ? '$label *' : label,
         helperText: helperText,
@@ -144,7 +242,8 @@ class Field extends StatelessWidget {
 class ActionButton extends StatefulWidget {
   final String label;
   final Future<void> Function()? action;
-  const ActionButton(this.label, this.action, {super.key});
+  final bool validateForm;
+  const ActionButton(this.label, this.action, {super.key, this.validateForm = true});
   @override
   State<ActionButton> createState() => _ActionButtonState();
 }
@@ -156,6 +255,11 @@ class _ActionButtonState extends State<ActionButton> {
     onPressed: busy || widget.action == null
         ? null
         : () async {
+            final form = Form.maybeOf(context);
+            if (widget.validateForm && form != null) {
+              if (!form.validate()) return;
+              form.save();
+            }
             setState(() => busy = true);
             try {
               await widget.action!();
@@ -360,7 +464,8 @@ Widget metric(String label, Object value) => Panel(
 class Picture extends StatelessWidget {
   final String url;
   final double height;
-  const Picture(this.url, {super.key, this.height = 130});
+  final BoxFit fit;
+  const Picture(this.url, {super.key, this.height = 130, this.fit = BoxFit.cover});
   @override
   Widget build(BuildContext context) {
     final uri = resolveMediaUrl(url);
@@ -404,7 +509,7 @@ class Picture extends StatelessWidget {
                 uri,
                 height: height,
                 width: double.infinity,
-                fit: BoxFit.cover,
+                fit: fit,
                 errorBuilder: (_, error, stack) => SizedBox(
                   height: height,
                   child: const Icon(Icons.broken_image_outlined),
@@ -500,7 +605,7 @@ class DateField extends StatelessWidget {
         final parsed = DateTime.tryParse(value) ?? now;
         final d = await showDatePicker(
           context: context,
-          initialDate: parsed.isBefore(first) ? first : parsed,
+          initialDate: parsed.isBefore(first) ? first : parsed.isAfter(DateTime(2100)) ? DateTime(2100) : parsed,
           firstDate: first,
           lastDate: DateTime(2100),
         );

@@ -1,3 +1,4 @@
+import '../core/validation.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -23,7 +24,7 @@ Future<bool> resolveConflict(
   if (!await confirm(
     context,
     'Reservation conflict',
-    '${error.message}\n${conflict.text('customer_name')} holds ${conflict.number('quantity')} item(s). Transfer to this order?',
+    '${error.message}\n${conflict.text('customer_name')} holds ${conflict.count('quantity')} item(s). Transfer to this order?',
   )) {
     return false;
   }
@@ -143,7 +144,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Record> get draft =>
       holds.where((r) => r.text('customer_id') == customer?.id).toList();
-  double maxFor(Record item) => math.max(
+  int maxFor(Record item) => math.max(
     available(item) -
         holds
             .where(
@@ -151,7 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   r.text('equipment_id') == item.id &&
                   r.text('customer_id') != customer?.id,
             )
-            .fold<double>(0, (s, r) => s + r.number('quantity')),
+            .fold<int>(0, (s, r) => s + r.count('quantity')),
     0,
   );
   Future<void> chooseCustomer() async {
@@ -221,237 +222,246 @@ class _HomeScreenState extends State<HomeScreen> {
         .where((e) => e.name.toLowerCase().contains(search.toLowerCase()))
         .toList();
     final width = MediaQuery.sizeOf(context).width;
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    final showConfirm = customer != null && draft.isNotEmpty;
     return Column(
       children: [
         Expanded(
-          child: RefreshIndicator(
-            onRefresh: load,
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _CustomerStories(
-                  customers: customers,
-                  selectedCustomerId: customer?.id,
-                  onSelected: selectCustomer,
-                  onSearch: chooseCustomer,
-                ),
-                const SizedBox(height: 12),
-                Panel(
-                  children: [
-                    Section(
-                      customer?.name ?? 'Select a customer',
-                      trailing: IconButton(
-                        onPressed: chooseCustomer,
-                        icon: const Icon(Icons.person_search_outlined),
-                      ),
-                    ),
-                    Text(
-                      customer?.text('phone') ??
-                          'Pick a customer to start a rental',
-                    ),
-                    Wrap(
-                      spacing: 4,
-                      runSpacing: 0,
-                      children: [
-                        TextButton(
+          // The confirm bar below keeps clear of the navigation bar itself.
+          child: MediaQuery.removePadding(
+            context: context,
+            removeBottom: showConfirm,
+            child: RefreshIndicator(
+              onRefresh: load,
+              child: PageList(
+                children: [
+                  _CustomerStories(
+                    customers: customers,
+                    selectedCustomerId: customer?.id,
+                    onSelected: selectCustomer,
+                    onSearch: chooseCustomer,
+                  ),
+                  const SizedBox(height: 12),
+                  Panel(
+                    children: [
+                      Section(
+                        customer?.name ?? 'Select a customer',
+                        trailing: IconButton(
                           onPressed: chooseCustomer,
-                          child: const Text('Search customer'),
-                        ),
-                        TextButton(
-                          onPressed: () => sheet(
-                            context,
-                            CustomerForm(
-                              onSaved: (r) => setState(() => customer = r),
-                            ),
-                          ),
-                          child: const Text('+ New'),
-                        ),
-                        if (customer != null)
-                          TextButton(
-                            onPressed: () async {
-                              if (draft.isNotEmpty &&
-                                  !await confirm(
-                                    context,
-                                    'Clear order?',
-                                    'Release every item reserved for this customer?',
-                                  )) {
-                                return;
-                              }
-                              try {
-                                await app!.repo.delete(
-                                  '/reservations/customer/${customer!.id}',
-                                );
-                                if (mounted) setState(() => customer = null);
-                                await poll();
-                              } catch (e) {
-                                if (context.mounted) toast(context, e);
-                              }
-                            },
-                            child: const Text('Clear'),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-                TextField(
-                  controller: searchControl,
-                  decoration: const InputDecoration(
-                    hintText: 'Search equipment...',
-                    prefixIcon: Icon(Icons.search),
-                  ),
-                  onChanged: (v) => setState(() => search = v),
-                ),
-                const SizedBox(height: 16),
-                if (filtered.isEmpty) const Empty('No equipment found'),
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: width >= 1100
-                        ? 4
-                        : width >= 800
-                        ? 3
-                        : 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    mainAxisExtent: 245,
-                  ),
-                  itemCount: filtered.length,
-                  itemBuilder: (c, i) {
-                    final e = filtered[i];
-                    final selected = draft.any(
-                      (h) => h.text('equipment_id') == e.id,
-                    );
-                    return Card(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: BorderSide(
-                          color: selected
-                              ? Theme.of(context).colorScheme.secondary
-                              : Theme.of(context).dividerColor,
-                          width: selected ? 2 : 1,
+                          icon: const Icon(Icons.person_search_outlined),
                         ),
                       ),
-                      child: InkWell(
-                        onTap: () => toggle(e),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Stack(
-                              children: [
-                                IgnorePointer(
-                                  child: Picture(
-                                    e.strings('images').firstOrNull ?? '',
-                                    height: 125,
-                                  ),
-                                ),
-                                if (selected)
-                                  const Positioned(
-                                    top: 8,
-                                    right: 8,
-                                    child: CircleAvatar(
-                                      radius: 13,
-                                      child: Icon(Icons.check, size: 18),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(10),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    categories
-                                            .where(
-                                              (c) =>
-                                                  c.id == e.text('category_id'),
-                                            )
-                                            .firstOrNull
-                                            ?.name
-                                            .toUpperCase() ??
-                                        '',
-                                    maxLines: 1,
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.primary,
-                                    ),
-                                  ),
-                                  Text(
-                                    e.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  Text(
-                                    '${money(e.number('rent_per_day'))}/day',
-                                  ),
-                                  Text(
-                                    '${maxFor(e)} in stock',
-                                    style: TextStyle(
-                                      color: maxFor(e) <= 2
-                                          ? Colors.orange
-                                          : null,
-                                    ),
-                                  ),
-                                ],
+                      Text(
+                        customer?.text('phone') ??
+                            'Pick a customer to start a rental',
+                      ),
+                      Wrap(
+                        spacing: 4,
+                        runSpacing: 0,
+                        children: [
+                          TextButton(
+                            onPressed: chooseCustomer,
+                            child: const Text('Search customer'),
+                          ),
+                          TextButton(
+                            onPressed: () => sheet(
+                              context,
+                              CustomerForm(
+                                onSaved: (r) => setState(() => customer = r),
                               ),
                             ),
-                          ],
-                        ),
+                            child: const Text('+ New'),
+                          ),
+                          if (customer != null)
+                            TextButton(
+                              onPressed: () async {
+                                if (draft.isNotEmpty &&
+                                    !await confirm(
+                                      context,
+                                      'Clear order?',
+                                      'Release every item reserved for this customer?',
+                                    )) {
+                                  return;
+                                }
+                                try {
+                                  await app!.repo.delete(
+                                    '/reservations/customer/${customer!.id}',
+                                  );
+                                  if (mounted) setState(() => customer = null);
+                                  await poll();
+                                } catch (e) {
+                                  if (context.mounted) toast(context, e);
+                                }
+                              },
+                              child: const Text('Clear'),
+                            ),
+                        ],
                       ),
-                    );
-                  },
-                ),
-              ],
+                    ],
+                  ),
+                  TextField(
+                    controller: searchControl,
+                    decoration: const InputDecoration(
+                      hintText: 'Search equipment...',
+                      prefixIcon: Icon(Icons.search),
+                    ),
+                    onChanged: (v) => setState(() => search = v),
+                  ),
+                  const SizedBox(height: 16),
+                  if (filtered.isEmpty) const Empty('No equipment found'),
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: width >= 1100
+                          ? 4
+                          : width >= 800
+                          ? 3
+                          : 2,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      // Card margin, photo and padding, plus four text lines
+                      // that grow with the system font size.
+                      mainAxisExtent: 165 + 80 * textScale,
+                    ),
+                    itemCount: filtered.length,
+                    itemBuilder: (c, i) {
+                      final e = filtered[i];
+                      final selected = draft.any(
+                        (h) => h.text('equipment_id') == e.id,
+                      );
+                      return Card(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(
+                            color: selected
+                                ? Theme.of(context).colorScheme.secondary
+                                : Theme.of(context).dividerColor,
+                            width: selected ? 2 : 1,
+                          ),
+                        ),
+                        child: InkWell(
+                          onTap: () => toggle(e),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Stack(
+                                children: [
+                                  IgnorePointer(
+                                    child: Picture(
+                                      e.strings('images').firstOrNull ?? '',
+                                      height: 125,
+                                    ),
+                                  ),
+                                  if (selected)
+                                    const Positioned(
+                                      top: 8,
+                                      right: 8,
+                                      child: CircleAvatar(
+                                        radius: 13,
+                                        child: Icon(Icons.check, size: 18),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(10),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      categories
+                                              .where(
+                                                (c) =>
+                                                    c.id ==
+                                                    e.text('category_id'),
+                                              )
+                                              .firstOrNull
+                                              ?.name
+                                              .toUpperCase() ??
+                                          '',
+                                      maxLines: 1,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primary,
+                                      ),
+                                    ),
+                                    Text(
+                                      e.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    Text(
+                                      '${money(e.number('rent_per_day'))}/day',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      '${maxFor(e)} in stock',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: maxFor(e) <= 2
+                                            ? Colors.orange
+                                            : null,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-        if (customer != null && draft.isNotEmpty)
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: ActionButton(
-                'Confirm ${draft.length} items • ${money(draft.fold<double>(0, (s, r) => s + r.number('quantity') * (equipment.where((e) => e.id == r.text('equipment_id')).firstOrNull?.number('rent_per_day') ?? 0)))}/day',
-                busy
-                    ? null
-                    : () async {
-                        final picked = draft
-                            .map((r) {
-                              final e = equipment
-                                  .where((e) => e.id == r.text('equipment_id'))
-                                  .firstOrNull;
-                              return e == null
-                                  ? null
-                                  : Record({
-                                      ...e.json,
-                                      'quantity': r.number('quantity'),
-                                      'stock_count': maxFor(e),
-                                    });
-                            })
-                            .whereType<Record>()
-                            .toList();
-                        final done = await Navigator.push<bool>(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => RentalFormScreen(
-                              customer: customer!,
-                              items: picked,
-                            ),
+        if (showConfirm)
+          BottomActionBar(
+            child: ActionButton(
+              'Confirm ${draft.length} items • ${money(draft.fold<double>(0, (s, r) => s + r.count('quantity') * (equipment.where((e) => e.id == r.text('equipment_id')).firstOrNull?.number('rent_per_day') ?? 0)))}/day',
+              busy
+                  ? null
+                  : () async {
+                      final picked = draft
+                          .map((r) {
+                            final e = equipment
+                                .where((e) => e.id == r.text('equipment_id'))
+                                .firstOrNull;
+                            return e == null
+                                ? null
+                                : Record({
+                                    ...e.json,
+                                    'quantity': r.count('quantity'),
+                                    'stock_count': maxFor(e),
+                                  });
+                          })
+                          .whereType<Record>()
+                          .toList();
+                      final done = await Navigator.push<bool>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => RentalFormScreen(
+                            customer: customer!,
+                            items: picked,
                           ),
-                        );
-                        if (done == true && mounted) {
-                          setState(() => customer = null);
-                          await load();
-                        }
-                      },
-              ),
+                        ),
+                      );
+                      if (done == true && mounted) {
+                        setState(() => customer = null);
+                        await load();
+                      }
+                    },
             ),
           ),
       ],
@@ -695,10 +705,10 @@ class RentalFormScreen extends StatefulWidget {
 class _RentalFormScreenState extends State<RentalFormScreen> {
   late final quantities = {
     for (final e in widget.items)
-      e.id: TextEditingController(text: e.text('quantity', '1')),
+      e.id: TextEditingController(text: '${e.count('quantity', 1)}'),
   };
   late final synced = {
-    for (final e in widget.items) e.id: e.number('quantity', 1),
+    for (final e in widget.items) e.id: e.count('quantity', 1),
   };
   final advance = TextEditingController(), remark = TextEditingController();
   String expected = '';
@@ -712,9 +722,9 @@ class _RentalFormScreenState extends State<RentalFormScreen> {
     super.dispose();
   }
 
-  double qty(Record item) {
-    final n = numValue(quantities[item.id]!.text);
-    return n == 0 ? 1 : n;
+  int qty(Record item) {
+    final n = int.tryParse(quantities[item.id]!.text) ?? 0;
+    return n < 1 ? 1 : n;
   }
 
   double get total {
@@ -736,6 +746,7 @@ class _RentalFormScreenState extends State<RentalFormScreen> {
 
   Future<void> sync(Record item) async {
     if (!widget.reservations) return;
+    if (numberProblem(quantities[item.id]!.text, integer: true, required: true, min: 1, max: 100000) != null) return;
     final value = qty(item);
     setState(() => syncing++);
     try {
@@ -762,10 +773,10 @@ class _RentalFormScreenState extends State<RentalFormScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => Form(child: Scaffold(
     appBar: AppBar(title: const Text('New Rental')),
-    body: ListView(
-      padding: const EdgeInsets.all(16),
+    bottomNavigationBar: BottomActionBar(child: confirmButton()),
+    body: PageList(
       children: [
         Panel(
           children: [
@@ -778,7 +789,7 @@ class _RentalFormScreenState extends State<RentalFormScreen> {
             children: [
               Section(e.name),
               Text(
-                '${money(e.number('rent_per_day'))}/day • ${e.number('stock_count')} available',
+                '${money(e.number('rent_per_day'))}/day • ${e.count('stock_count')} available',
               ),
               Focus(
                 onFocusChange: (focused) {
@@ -787,7 +798,10 @@ class _RentalFormScreenState extends State<RentalFormScreen> {
                 child: Field(
                   'Quantity',
                   quantities[e.id]!,
-                  number: true,
+                  integer: true,
+                  required: true,
+                  min: 1,
+                  max: e.count('stock_count'),
                   onChanged: (_) => setState(() {}),
                 ),
               ),
@@ -805,76 +819,76 @@ class _RentalFormScreenState extends State<RentalFormScreen> {
           number: true,
           onChanged: (_) => setState(() {}),
         ),
-        Field('Remark', remark, multiline: true),
+        Field('Remark', remark, multiline: true, maxLength: 1000),
         SwitchListTile(
           title: const Text('Free add-on / accessory items'),
           value: accessory,
           onChanged: (v) => setState(() => accessory = v),
         ),
         metric('Estimated total rent', money(total)),
-        ActionButton(
-          'Confirm Rental',
-          syncing > 0
-              ? null
-              : () async {
-                  if (widget.items.isEmpty) {
-                    throw Exception('Select at least one item to rent.');
-                  }
-                  for (final e in widget.items) {
-                    if (qty(e) <= 0 || qty(e) > e.number('stock_count')) {
-                      throw Exception(
-                        'Insufficient stock for ${e.name}. Available: ${e.number('stock_count')}.',
-                      );
-                    }
-                  }
-                  if (total > 0 && numValue(advance.text) > total) {
-                    throw Exception(
-                      'Advance payment cannot exceed the total rent of ${money(total)}.',
-                    );
-                  }
-                  final app = AppScope.of(context);
-                  await app.repo.createRentals({
-                    'customer_id': widget.customer.id,
-                    'items': widget.items
-                        .map((e) => {'equipment_id': e.id, 'quantity': qty(e)})
-                        .toList(),
-                    if (expected.isNotEmpty) 'expected_return_date': expected,
-                    if (advance.text.isNotEmpty)
-                      'advance_amount': numValue(advance.text),
-                    if (remark.text.isNotEmpty || accessory)
-                      'remark': [
-                        remark.text,
-                        if (accessory)
-                          'Customer took free add-on / accessory items.',
-                      ].where((s) => s.isNotEmpty).join(' | '),
-                  });
-                  if (widget.reservations) {
-                    try {
-                      await app.repo.delete(
-                        '/reservations/customer/${widget.customer.id}',
-                      );
-                    } catch (e) {
-                      if (context.mounted) {
-                        toast(
-                          context,
-                          'Rental created, but clearing the draft failed: $e',
-                        );
-                      }
-                    }
-                  }
-                  app.changed();
-                  if (context.mounted) {
-                    Navigator.pop(context, true);
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) =>
-                            CustomerDetailScreen(customer: widget.customer),
-                      ),
-                    );
-                  }
-                },
-        ),
       ],
     ),
+  ));
+
+  Widget confirmButton() => ActionButton(
+    'Confirm Rental',
+    syncing > 0
+        ? null
+        : () async {
+            if (widget.items.isEmpty) {
+              throw Exception('Select at least one item to rent.');
+            }
+            for (final e in widget.items) {
+              if (qty(e) <= 0 || qty(e) > e.count('stock_count')) {
+                throw Exception(
+                  'Insufficient stock for ${e.name}. Available: ${e.count('stock_count')}.',
+                );
+              }
+            }
+            if (total > 0 && inputNumber(advance.text) > total) {
+              throw Exception(
+                'Advance payment cannot exceed the total rent of ${money(total)}.',
+              );
+            }
+            final app = AppScope.of(context);
+            await app.repo.createRentals({
+              'customer_id': widget.customer.id,
+              'items': widget.items
+                  .map((e) => {'equipment_id': e.id, 'quantity': qty(e)})
+                  .toList(),
+              if (expected.isNotEmpty) 'expected_return_date': expected,
+              if (advance.text.isNotEmpty)
+                'advance_amount': inputNumber(advance.text),
+              if (remark.text.isNotEmpty || accessory)
+                'remark': [
+                  remark.text,
+                  if (accessory) 'Customer took free add-on / accessory items.',
+                ].where((s) => s.isNotEmpty).join(' | '),
+            });
+            if (widget.reservations) {
+              try {
+                await app.repo.delete(
+                  '/reservations/customer/${widget.customer.id}',
+                );
+              } catch (e) {
+                if (mounted) {
+                  toast(
+                    context,
+                    'Rental created, but clearing the draft failed: $e',
+                  );
+                }
+              }
+            }
+            app.changed();
+            if (mounted) {
+              Navigator.pop(context, true);
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) =>
+                      CustomerDetailScreen(customer: widget.customer),
+                ),
+              );
+            }
+          },
   );
 }

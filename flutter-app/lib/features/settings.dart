@@ -1,3 +1,5 @@
+import '../core/phone_field.dart';
+import '../core/validation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../app/controller.dart';
@@ -10,6 +12,7 @@ import 'invoices.dart';
 import 'reports.dart';
 import 'expenses.dart';
 import 'team.dart';
+import 'pending.dart';
 
 class MoreScreen extends StatefulWidget {
   const MoreScreen({super.key});
@@ -47,9 +50,9 @@ class _MoreScreenState extends State<MoreScreen> {
   @override
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    return PageList(
       children: [
+        ListTile(leading: const Icon(Icons.sync), title: const Text('Pending changes'), subtitle: Text(app.repo.offline ? 'Offline · showing saved data' : 'Review saved drafts and synchronization errors'), onTap: () => open(const PendingScreen())),
         Panel(
           children: [
             const Section('More'),
@@ -81,12 +84,7 @@ class _MoreScreenState extends State<MoreScreen> {
               label: const Text('Expenses'),
             ),
             OutlinedButton.icon(
-              onPressed: () => open(
-                Scaffold(
-                  appBar: AppBar(title: const Text('Damaged')),
-                  body: const DamagedScreen(),
-                ),
-              ),
+              onPressed: () => open(const DamagedScreen()),
               icon: const Icon(Icons.build_outlined),
               label: const Text('Damaged'),
             ),
@@ -140,18 +138,20 @@ class _MoreScreenState extends State<MoreScreen> {
               'Limit how much discount staff can apply when receiving a return. Leave at 0 for no limit.',
             ),
             const SizedBox(height: 12),
-            Field('Max discount (%)', cap, number: true),
+            Field('Max discount (%)', cap, number: true, max: 100),
             ActionButton('Save', () async {
-              final value = numValue(cap.text).clamp(0, 100);
+              final problem = numberProblem(cap.text, max: 100);
+              if (problem != null) throw InputProblem(problem);
+              final value = inputNumber(cap.text);
               // Stored on the server, so it applies to every device and the web app.
-              final saved = await app.repo.save('/settings/max_discount_percent', {'value': value > 0 ? '$value' : null}, update: true);
+              final saved = await app.repo.save('/settings/max_discount_percent', {'value': value > 0 ? decimalText(value) : null}, update: true);
               cap.text = saved.text('value');
               app.changed();
               if (context.mounted) {
                 toast(
                   context,
                   value > 0
-                      ? 'Return discounts are now capped at $value%.'
+                      ? 'Return discounts are now capped at ${decimalText(value)}%.'
                       : 'Discount cap removed — any discount amount is allowed.',
                 );
               }
@@ -167,9 +167,10 @@ class _MoreScreenState extends State<MoreScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: DropdownButtonFormField<String>(
+                  isExpanded: true,
                   initialValue: app.activeShopId,
                   decoration: const InputDecoration(labelText: 'Working in shop'),
-                  items: app.shops.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
+                  items: app.shops.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name, overflow: TextOverflow.ellipsis))).toList(),
                   onChanged: (id) {
                     if (id != null) app.selectShop(id);
                   },
@@ -272,8 +273,7 @@ class _AccountScreenState extends State<AccountScreen> {
             catalog = s.data![2],
             plan = account.child('plan'),
             sub = account.child('subscription');
-        return ListView(
-          padding: const EdgeInsets.all(16),
+        return PageList(
           children: [
             Panel(
               children: [
@@ -281,7 +281,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 Text(plan.name, style: Theme.of(context).textTheme.titleLarge),
                 Text(plan.text('description')),
                 Text(
-                  '${plan.text('currency')} ${plan.number('price')} / ${plan.text('billing_cycle')}',
+                  '${plan.text('currency')} ${decimalText(plan.number('price'))} / ${plan.text('billing_cycle')}',
                 ),
                 StatusPill(sub.text('status')),
                 Text('Trial ends ${dateText(sub.text('trial_ends_at'))}'),
@@ -296,7 +296,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 children: [
                   Text(e.key.replaceAll('_', ' ')),
                   Text(
-                    '${m.number('used')} / ${m.json['limit'] ?? 'Unlimited'}',
+                    '${m.count('used')} / ${m.json['limit'] == null ? 'Unlimited' : m.count('limit')}',
                   ),
                   LinearProgressIndicator(
                     value: (m.number('percent') / 100).clamp(0, 1),
@@ -361,7 +361,7 @@ class _CompanyScreenState extends State<CompanyScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => Form(child: Scaffold(
     appBar: AppBar(title: const Text('Company & Invoice Settings')),
     body: FutureBuilder<Record>(
       future: future,
@@ -385,8 +385,7 @@ class _CompanyScreenState extends State<CompanyScreen> {
           }
           logo = company.text('logo_url');
         }
-        return ListView(
-          padding: const EdgeInsets.all(16),
+        return PageList(
           children: [
             Section(company.text('company_name')),
             if (logo.isNotEmpty) Picture(logo, height: 120),
@@ -394,29 +393,31 @@ class _CompanyScreenState extends State<CompanyScreen> {
               ActionButton('Upload logo', () async {
                 final url = await uploadImage(AppScope.of(context), kind: UploadKind.logo);
                 if (url != null && mounted) setState(() => logo = url);
-              }),
+              }, validateForm: false),
             const SizedBox(height: 16),
-            Field('Business address', controls['address']!, multiline: true),
-            Field('Phone', controls['phone']!),
-            Field('Email', controls['email']!),
-            Field('Tax ID (GSTIN / VAT / etc.)', controls['tax_id']!),
+            Field('Business address', controls['address']!, multiline: true, maxLength: 500),
+            PhoneField(controls['phone']!, preserveLegacy: true),
+            Field('Email', controls['email']!, validator: emailProblem, keyboardType: TextInputType.emailAddress),
+            Field('Tax ID (GSTIN / VAT / etc.)', controls['tax_id']!, maxLength: 60),
             Field(
               'Default tax rate (%)',
               controls['default_tax_rate_percent']!,
               number: true,
+              max: 100,
             ),
             Field(
               'Invoice footer note',
               controls['footer_note']!,
               multiline: true,
+              maxLength: 1000,
             ),
             ActionButton('Save changes', () async {
               final app = AppScope.of(context);
               await app.repo.save('/account/company', {
                 'logo_url': logo.isEmpty ? null : logo,
                 for (final e in controls.entries)
-                  e.key: e.key == 'default_tax_rate_percent'
-                      ? numValue(e.value.text)
+                  if (e.key != 'phone' || e.value.text != company.text('phone')) e.key: e.key == 'default_tax_rate_percent'
+                      ? inputNumber(e.value.text)
                       : e.value.text.trim().isEmpty
                       ? null
                       : e.value.text.trim(),
@@ -430,5 +431,5 @@ class _CompanyScreenState extends State<CompanyScreen> {
         );
       },
     ),
-  );
+  ));
 }

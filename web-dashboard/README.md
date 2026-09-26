@@ -13,7 +13,7 @@ npm install
 npm run dev             # http://localhost:5174
 ```
 
-Without `VITE_API_URL` the app uses the hosted API, `https://marzi-api.vercel.app/`.
+Without `VITE_API_URL`, `npm run dev` uses the local API, `http://localhost:5000/`, and `npm run build` uses the hosted one, `https://marzi-api.vercel.app/`.
 
 ## Scripts
 

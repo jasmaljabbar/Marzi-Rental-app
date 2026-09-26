@@ -1,3 +1,4 @@
+import '../core/validation.dart';
 import 'package:flutter/material.dart';
 import '../app/controller.dart';
 import '../core/widgets.dart';
@@ -30,7 +31,7 @@ class _AuthScreenState extends State<AuthScreen> {
   @override
   Widget build(BuildContext context) => Theme(
     data: rentalTheme(Brightness.light),
-    child: Scaffold(
+    child: Form(child: Scaffold(
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -72,12 +73,13 @@ class _AuthScreenState extends State<AuthScreen> {
                             : 'Sign in to your account',
                       ),
                       const SizedBox(height: 24),
-                      if (signup) Field('Business name', company),
-                      Field('Username', username),
-                      if (signup) Field('Email (recommended, for password resets)', email),
+                      if (signup) Field('Business name', company, required: true, maxLength: 120),
+                      Field('Username', username, required: true, maxLength: signup ? 64 : 200, validator: signup ? usernameProblem : null),
+                      if (signup) Field('Email (recommended, for password resets)', email, validator: emailProblem, keyboardType: TextInputType.emailAddress),
                       if (!signup && needsBusinessCode)
                         Field('Business code', businessCode, helperText: 'Ask your business owner, or see More > Account.'),
-                      TextField(
+                      TextFormField(
+                        validator: (v) => v == null || v.isEmpty ? 'Enter your password.' : null,
                         controller: password,
                         obscureText: !visible,
                         decoration: InputDecoration(
@@ -167,7 +169,7 @@ class _AuthScreenState extends State<AuthScreen> {
         ),
       ),
     ),
-  );
+  ));
 }
 
 /// Requests a password reset link by email. The API never reveals whether
@@ -200,8 +202,8 @@ class _ResetPasswordState extends State<ResetPassword> {
       if (message.isEmpty) ...[
         const Text('We will email a reset link if your account has an email address.'),
         const SizedBox(height: 12),
-        Field('Username', user),
-        Field('Business code (optional)', businessCode),
+        Field('Username', user, required: true, maxLength: 200),
+        Field('Business code (optional)', businessCode, maxLength: 40),
         ActionButton('Send reset link', () async {
           if (user.text.trim().isEmpty) throw Exception('Enter your username first.');
           final r = await AppScope.of(context).repo.save('/auth/forgot-password', {

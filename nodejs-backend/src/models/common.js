@@ -14,7 +14,7 @@ function tenantFields() {
 }
 
 function syncIdField() {
-  return { syncId: { type: String, default: uuidv4, unique: true } };
+  return { syncId: { type: String, default: uuidv4, unique: true }, syncPayloadHash: { type: String, default: null } };
 }
 
 function archiveFields() {

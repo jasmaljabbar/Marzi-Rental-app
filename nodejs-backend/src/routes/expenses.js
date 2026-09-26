@@ -1,3 +1,6 @@
+const { replayCreate } = require("../middleware/replayCreate");
+const Expense = require("../models/Expense");
+const { expenseDto } = require("../dto");
 const c = require("../controllers/expenseController");
 const v = require("../validators/catalog");
 const { tenantRouter } = require("./_helpers");
@@ -11,7 +14,7 @@ router.put("/recurring/:id", adminOnly, validate({ params: idParams, body: v.rec
 router.delete("/recurring/:id", adminOnly, validate({ params: idParams }), c.removeRecurring);
 
 router.get("/", validate({ query: v.expenseList }), c.list);
-router.post("/", validate({ body: v.expenseCreate }), c.create);
+router.post("/", validate({ body: v.expenseCreate }), replayCreate(Expense, expenseDto), c.create);
 router.put("/:id", adminOnly, validate({ params: idParams, body: v.expenseUpdate }), c.update);
 router.delete("/:id", adminOnly, validate({ params: idParams }), c.remove);
 router.post("/:id/archive", adminOnly, validate({ params: idParams }), c.archive);

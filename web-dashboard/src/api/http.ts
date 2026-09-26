@@ -1,7 +1,10 @@
 import axios, { AxiosError } from "axios";
 import type { ApiErrorBody } from "../types/models";
 
-export const API_URL = import.meta.env.VITE_API_URL || "https://marzi-api.vercel.app/";
+// `npm run dev` talks to the local Node API, `npm run build` to the hosted one;
+// VITE_API_URL overrides both.
+export const API_URL =
+  import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:5000/" : "https://marzi-api.vercel.app/");
 
 const TOKEN_KEY = "rental_admin_token";
 

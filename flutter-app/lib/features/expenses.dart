@@ -1,3 +1,4 @@
+import '../core/validation.dart';
 import 'package:flutter/material.dart';
 import '../app/controller.dart';
 import '../core/models.dart';
@@ -44,8 +45,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
               search.toLowerCase(),
             ),
       );
-      return ListView(
-        padding: const EdgeInsets.all(16),
+      return PageList(
         children: [
           Section(
             'Expenses',
@@ -169,7 +169,7 @@ class _ExpenseFormState extends State<ExpenseForm> {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Section(widget.initial == null ? 'Add Expense' : 'Edit Expense'),
-      Field('Expense category', category),
+      Field('Expense category', category, required: true, maxLength: 80),
       Wrap(
         spacing: 8,
         children:
@@ -183,9 +183,10 @@ class _ExpenseFormState extends State<ExpenseForm> {
                 .toList(),
       ),
       const SizedBox(height: 16),
-      Field('Amount (INR)', amount, number: true),
-      Field('Remark', remark, multiline: true),
+      Field('Amount (INR)', amount, number: true, required: true),
+      Field('Remark', remark, multiline: true, maxLength: 1000),
       DropdownButtonFormField<String>(
+        isExpanded: true,
         initialValue:
             ['Cash', 'UPI', 'Card', 'Bank Transfer', 'Other'].contains(mode)
             ? mode
@@ -197,7 +198,7 @@ class _ExpenseFormState extends State<ExpenseForm> {
           'Card',
           'Bank Transfer',
           'Other',
-        ].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+        ].map((s) => DropdownMenuItem(value: s, child: Text(s, overflow: TextOverflow.ellipsis))).toList(),
         onChanged: (v) => mode = v ?? 'Cash',
       ),
       const SizedBox(height: 16),
@@ -205,7 +206,7 @@ class _ExpenseFormState extends State<ExpenseForm> {
       ActionButton('Attach receipt', () async {
         final result = await uploadImage(AppScope.of(context), kind: UploadKind.receipt);
         if (result != null && mounted) setState(() => receipt = result);
-      }),
+      }, validateForm: false),
       if (receipt.isNotEmpty)
         TextButton(
           onPressed: () => setState(() => receipt = ''),
@@ -216,9 +217,6 @@ class _ExpenseFormState extends State<ExpenseForm> {
         if (category.text.trim().isEmpty) {
           throw Exception('Please enter an expense category.');
         }
-        if (numValue(amount.text) <= 0) {
-          throw Exception('Please enter an amount greater than zero.');
-        }
         final app = AppScope.of(context);
         await app.repo.save(
           widget.initial == null
@@ -226,7 +224,7 @@ class _ExpenseFormState extends State<ExpenseForm> {
               : '/expenses/${widget.initial!.id}',
           {
             'category': category.text.trim(),
-            'amount': numValue(amount.text),
+            'amount': inputNumber(amount.text),
             'remark': remark.text,
             'payment_mode': mode,
             'receipt_url': receipt,

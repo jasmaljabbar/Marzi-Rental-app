@@ -1,3 +1,5 @@
+import '../core/phone_field.dart';
+import '../core/validation.dart';
 import 'package:flutter/material.dart';
 import '../app/controller.dart';
 import '../core/models.dart';
@@ -77,14 +79,9 @@ class _CustomerFormState extends State<CustomerForm> {
         ),
         const Text('Shown next to the customer in lists.'),
         const SizedBox(height: 12),
-        Field('Name', name, required: true),
-        Field(
-          'Phone',
-          phone,
-          required: true,
-          keyboardType: TextInputType.phone,
-        ),
-        Field('Address', address, multiline: true),
+        Field('Name', name, required: true, maxLength: 120),
+        PhoneField(phone, required: true, preserveLegacy: widget.initial != null),
+        Field('Address', address, multiline: true, maxLength: 500),
         const Section('ID document (optional)'),
         const Text('Kept private. Never used as the customer\'s picture.'),
         const SizedBox(height: 8),
@@ -126,7 +123,7 @@ class _CustomerFormState extends State<CustomerForm> {
           final r = await app.repo
               .save(edit ? '/customers/${widget.initial!.id}' : '/customers', {
                 'name': name.text.trim(),
-                'phone': phone.text.trim(),
+                if (!edit || phone.text != widget.initial!.text('phone')) 'phone': phone.text.trim(),
                 'address': address.text.trim().isEmpty
                     ? null
                     : address.text.trim(),
@@ -135,8 +132,13 @@ class _CustomerFormState extends State<CustomerForm> {
               }, update: edit);
           app.changed();
           if (context.mounted) {
-            widget.onSaved?.call(r);
-            Navigator.pop(context, r);
+            if (r.text('sync_status') == 'pending') {
+              toast(context, 'Saved on this device. See More > Pending changes.');
+              Navigator.pop(context);
+            } else {
+              widget.onSaved?.call(r);
+              Navigator.pop(context, r);
+            }
           }
         }),
         TextButton(
@@ -235,8 +237,9 @@ class _EquipmentFormState extends State<EquipmentForm> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Section(widget.initial == null ? 'Add Equipment' : 'Edit Equipment'),
-        Field('Equipment Name', name, required: true),
+        Field('Equipment Name', name, required: true, maxLength: 120),
         DropdownButtonFormField<String>(
+          isExpanded: true,
           initialValue: categories.any((c) => c.id == category)
               ? category
               : null,
@@ -244,7 +247,12 @@ class _EquipmentFormState extends State<EquipmentForm> {
           validator: (value) =>
               value == null || value.isEmpty ? 'Category is required' : null,
           items: categories
-              .map((c) => DropdownMenuItem(value: c.id, child: Text(c.name)))
+              .map(
+                (c) => DropdownMenuItem(
+                  value: c.id,
+                  child: Text(c.name, overflow: TextOverflow.ellipsis),
+                ),
+              )
               .toList(),
           onChanged: (v) => setState(() => category = v ?? ''),
         ),
@@ -258,11 +266,11 @@ class _EquipmentFormState extends State<EquipmentForm> {
           },
           child: const Text('+ Add category'),
         ),
-        if (widget.initial == null) Field('Stock Count', stock, number: true),
+        if (widget.initial == null) Field('Stock Count', stock, integer: true, max: 1000000),
         Field('Rent / Day (INR)', rate, number: true),
         Field('Purchase Price / Unit (INR)', price, number: true),
-        Field('Useful Life (years)', life, number: true),
-        Field('Description', description),
+        Field('Useful Life (years)', life, number: true, max: 100),
+        Field('Description', description, maxLength: 2000),
         MultiImageField(
           urls: images,
           onChanged: (next) => setState(() => images = next),
@@ -286,13 +294,11 @@ class _EquipmentFormState extends State<EquipmentForm> {
               'description': description.text.trim().isEmpty
                   ? null
                   : description.text.trim(),
-              'rent_per_day': numValue(rate.text),
-              'purchase_price_per_unit': numValue(price.text),
-              'useful_life_years': numValue(life.text) == 0
-                  ? 5
-                  : numValue(life.text),
+              'rent_per_day': inputNumber(rate.text),
+              'purchase_price_per_unit': inputNumber(price.text),
+              'useful_life_years': inputNumber(life.text, fallback: 5),
               'images': images,
-              if (widget.initial == null) 'stock_count': numValue(stock.text),
+              if (widget.initial == null) 'stock_count': inputCount(stock.text),
               if (widget.initial == null) 'damaged_count': 0,
             },
             update: widget.initial != null,
@@ -328,7 +334,7 @@ class _CategoryFormState extends State<CategoryForm> {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       const Section('Add category'),
-      Field('Category name', name),
+      Field('Category name', name, required: true, maxLength: 80),
       ActionButton('Add category', () async {
         if (name.text.trim().isEmpty) {
           throw Exception('Please enter a category name.');
@@ -338,17 +344,24 @@ class _CategoryFormState extends State<CategoryForm> {
           'name': name.text.trim(),
         });
         app.changed();
-        if (context.mounted) Navigator.pop(context, result);
+        if (context.mounted) {
+          if (result.text('sync_status') == 'pending') {
+            toast(context, 'Category saved locally. Select it after synchronization.');
+            Navigator.pop(context);
+          } else { Navigator.pop(context, result); }
+        }
       }),
     ],
   );
 }
 
 /// Small action-specific inputs used for stock, maintenance, payments and scrap.
+/// Keys in [integers] are whole-number counts; keys in [numbers] may have
+/// decimals.
 class OperationForm extends StatefulWidget {
   final String title;
   final Map<String, String> fields;
-  final Set<String> numbers;
+  final Set<String> numbers, integers;
   final Future<void> Function(Map<String, String>) submit;
   const OperationForm({
     super.key,
@@ -356,6 +369,7 @@ class OperationForm extends StatefulWidget {
     required this.fields,
     required this.submit,
     this.numbers = const {},
+    this.integers = const {},
   });
   @override
   State<OperationForm> createState() => _OperationFormState();
@@ -379,7 +393,16 @@ class _OperationFormState extends State<OperationForm> {
     children: [
       Section(widget.title),
       ...controls.entries.map(
-        (e) => Field(e.key, e.value, number: widget.numbers.contains(e.key)),
+        (e) => Field(
+          e.key,
+          e.value,
+          number: widget.numbers.contains(e.key),
+          integer: widget.integers.contains(e.key),
+          required: widget.integers.contains(e.key),
+          min: widget.integers.contains(e.key) ? 1 : 0,
+          max: widget.integers.contains(e.key) ? 100000 : 1e10,
+          maxLength: widget.numbers.contains(e.key) || widget.integers.contains(e.key) ? null : 500,
+        ),
       ),
       ActionButton('Save', () async {
         await widget.submit(controls.map((k, v) => MapEntry(k, v.text)));

@@ -1,3 +1,6 @@
+import 'controller.dart';
+import '../core/models.dart';
+import '../features/pending.dart';
 import 'package:flutter/material.dart';
 import '../features/catalog.dart';
 import '../features/home.dart';
@@ -81,6 +84,18 @@ class _ShellState extends State<Shell> {
       appBar: AppBar(
         title: Text(names[tab]),
         actions: [
+          FutureBuilder<List<Json>>(
+            future: AppScope.of(context).repo.pending(),
+            builder: (context, snapshot) => IconButton(
+              tooltip: 'Pending changes',
+              icon: Badge(
+                isLabelVisible: snapshot.data?.isNotEmpty ?? false,
+                label: Text('${snapshot.data?.length ?? 0}'),
+                child: const Icon(Icons.sync),
+              ),
+              onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const PendingScreen())),
+            ),
+          ),
           IconButton(
             tooltip: 'Rental alerts',
             onPressed: () => Navigator.push(

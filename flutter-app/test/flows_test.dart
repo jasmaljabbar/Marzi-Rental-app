@@ -54,7 +54,7 @@ void main() {
     final app = AppController(store: MemoryStore(), api: api)..ready = true;
     await tester.pumpWidget(RentalApp(controller: app, autoStart: false));
 
-    await tester.enterText(find.widgetWithText(TextField, 'Username'), 'admin');
+    await tester.enterText(find.widgetWithText(TextField, 'Username *'), 'admin');
     await tester.enterText(find.widgetWithText(TextField, 'Password'), 'secret-pass-1');
     await tester.tap(find.text('Sign in'));
     await tester.pumpAndSettle();

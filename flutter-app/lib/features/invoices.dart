@@ -31,8 +31,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Invoices')),
-    body: ListView(
-      padding: const EdgeInsets.all(16),
+    body: PageList(
       children: [
         TextField(
           decoration: const InputDecoration(
@@ -135,8 +134,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
             customer = invoice.child('customer'),
             charges = invoice.child('charges'),
             rental = invoice.child('rental');
-        return ListView(
-          padding: const EdgeInsets.all(16),
+        return PageList(
           children: [
             Panel(
               children: [
@@ -176,7 +174,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
                 const Section('Items'),
                 Text(rental.child('equipment').name),
                 Text(
-                  '${charges.number('quantity')} × ${charges.number('days_rented')} days × ${money(charges.number('rent_per_day'))}',
+                  '${charges.count('quantity')} × ${charges.count('days_rented')} days × ${money(charges.number('rent_per_day'))}',
                 ),
                 Text(
                   '${dateText(rental.text('rented_at'))} — ${dateText(rental.text('returned_at'))}',
@@ -192,7 +190,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
                   charge('Late fee', charges.number('late_fee_amount')),
                 if (charges.number('tax_amount') > 0)
                   charge(
-                    'Tax (${charges.number('tax_rate_percent')}%)',
+                    'Tax (${decimalText(charges.number('tax_rate_percent'))}%)',
                     charges.number('tax_amount'),
                   ),
                 const Divider(),

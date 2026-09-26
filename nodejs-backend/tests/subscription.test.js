@@ -20,7 +20,7 @@ describe("subscription gates and billing sync (P1-5)", () => {
 
   it("blocks writes but not reads once the trial has ended", async () => {
     await Subscription.updateOne({ accountId: owner.info.account_id }, { $set: { trialEndsAt: new Date(Date.now() - 1000) } });
-    const write = await owner.post("/customers").send({ name: "X", phone: "5551234" });
+    const write = await owner.post("/customers").send({ name: "X", phone: "9875551234" });
     assert.equal(write.status, 402);
     assert.equal(write.body.code, "TRIAL_EXPIRED");
     assert.equal((await owner.get("/customers")).status, 200);
@@ -38,7 +38,7 @@ describe("subscription gates and billing sync (P1-5)", () => {
     const Plan = require("../src/models/Plan");
     await Plan.updateOne({ key: "trial" }, { $set: { "limits.maxCustomers": 1 } });
     await h.createCustomer(owner);
-    const res = await owner.post("/customers").send({ name: "Second", phone: "5559876" });
+    const res = await owner.post("/customers").send({ name: "Second", phone: "9875559876" });
     assert.equal(res.status, 403);
     assert.equal(res.body.code, "PLAN_LIMIT_REACHED");
   });

@@ -31,7 +31,7 @@ List<String> networkUrls(WidgetTester tester) => tester
     .map((i) => i.url)
     .toList();
 
-XFile picked(String name, [int size = 16]) => XFile.fromData(Uint8List(size), name: name, path: name);
+XFile picked(String name, [int size = 16]) => XFile.fromData(Uint8List.fromList(List.generate(size, (i) => name.codeUnitAt(i % name.length))), name: name, path: name);
 
 /// Hosts a MultiImageField with a fake picker and uploader.
 class Harness extends StatefulWidget {
@@ -244,6 +244,15 @@ void main() {
       expect(await urlsAfter(tester), names.map(uploadedUrl).toList());
       expect(find.text('Images (4/4)'), findsOneWidget);
       expect(find.textContaining('Add image'), findsNothing, reason: 'no room left');
+    });
+
+    testWidgets('rejects the same image selected twice', (tester) async {
+      final sent = <String>[];
+      await tester.pumpWidget(host(Harness(pick: () => [picked('same.jpg'), picked('same.jpg')], upload: (n) async => uploadedUrl((sent..add(n)).last), busy: [])));
+      await tester.tap(find.text('Add images (up to 4)'));
+      expect(await urlsAfter(tester), [uploadedUrl('same.jpg')]);
+      expect(sent.length, 1);
+      expect(find.textContaining('already selected'), findsOneWidget);
     });
 
     testWidgets('adds 2 new images to 2 existing ones', (tester) async {

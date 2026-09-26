@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:convert';
+import '../core/offline_store.dart';
 import 'package:flutter/material.dart';
 import '../core/api.dart';
 import '../core/models.dart';
@@ -5,6 +8,8 @@ import '../core/storage.dart';
 
 class AppController extends ChangeNotifier {
   final LocalStore store;
+  final OfflineStore offlineStore;
+  Timer? _syncTimer;
   late final RentalRepository repo;
   bool ready = false;
   String startupError = '', token = '', username = '', role = 'staff', businessCode = '';
@@ -14,7 +19,7 @@ class AppController extends ChangeNotifier {
   Record? account, catalog;
   int revision = 0;
 
-  AppController({LocalStore? store, ApiClient? api}) : store = store ?? LocalStore() {
+  AppController({LocalStore? store, ApiClient? api, OfflineStore? offlineStore}) : store = store ?? LocalStore(), offlineStore = offlineStore ?? OfflineStore() {
     final client = api ?? ApiClient(token: () => token);
     repo = RentalRepository(
       ApiClient(
@@ -24,8 +29,21 @@ class AppController extends ChangeNotifier {
         baseUrl: client.baseUrl,
         onUnauthorized: _sessionExpired,
       ),
+      local: this.offlineStore,
+      identity: () => userIdentity,
+      onChanged: changed,
     );
   }
+
+  String get userIdentity {
+    try {
+      final payload = jsonDecode(utf8.decode(base64Url.decode(base64Url.normalize(token.split('.')[1])))) as Map;
+      return '${payload['sub'] ?? payload['id'] ?? ''}';
+    } catch (_) { return ''; }
+  }
+
+  @override
+  void dispose() { _syncTimer?.cancel(); super.dispose(); }
 
   bool get isAdmin => role == 'owner' || role == 'admin';
 
@@ -36,7 +54,7 @@ class AppController extends ChangeNotifier {
     try {
       await store.init();
       token = await store.tokens.read();
-      await repo.get('/health');
+      await offlineStore.init();
       username = store.get('username');
       role = store.get('role').isEmpty ? 'staff' : store.get('role');
       businessCode = store.get('business_code');
@@ -47,7 +65,10 @@ class AppController extends ChangeNotifier {
         _ => ThemeMode.system,
       };
       ready = true;
-      if (token.isNotEmpty) await loadSession();
+      if (token.isNotEmpty) unawaited(loadSession());
+      _syncTimer?.cancel();
+      _syncTimer = Timer.periodic(const Duration(seconds: 30), (_) { if (token.isNotEmpty) unawaited(repo.syncPending()); });
+      unawaited(repo.syncPending());
     } catch (e) {
       startupError = e.toString();
     }
@@ -67,6 +88,7 @@ class AppController extends ChangeNotifier {
     });
     await applySession(result);
     await loadSession();
+    unawaited(repo.syncPending());
   }
 
   Future<void> applySession(Record result) async {

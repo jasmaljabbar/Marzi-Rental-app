@@ -23,7 +23,9 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), selec
 
 // Accessible dialog: focus moves in on open, Tab stays inside, Escape closes,
 // focus returns to the trigger on close, and the page behind doesn't scroll.
-// On phones it opens as a bottom sheet that uses the full width.
+// On phones it opens as a bottom sheet that uses the full width, sized to the
+// visible viewport (dvh) so its last buttons aren't under the browser's
+// toolbar.
 export function Modal({ open, onClose, title, description, children, size = "md" }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -81,7 +83,7 @@ export function Modal({ open, onClose, title, description, children, size = "md"
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
         className={clsx(
-          "relative max-h-[92vh] w-full overflow-y-auto rounded-t-2xl border border-slate-200 bg-white p-5 shadow-xl outline-none dark:border-slate-800 dark:bg-slate-900 sm:rounded-xl sm:p-6",
+          "relative max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl border border-slate-200 bg-white p-5 shadow-xl outline-none dark:border-slate-800 dark:bg-slate-900 sm:rounded-xl sm:p-6",
           SIZE_CLASSES[size]
         )}
       >

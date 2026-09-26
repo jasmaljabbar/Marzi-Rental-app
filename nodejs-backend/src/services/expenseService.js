@@ -1,3 +1,4 @@
+const { syncFields } = require("../lib/sync");
 const Expense = require("../models/Expense");
 const Equipment = require("../models/Equipment");
 const RecurringExpenseTemplate = require("../models/RecurringExpenseTemplate");
@@ -68,6 +69,7 @@ function listFilter(req, { include_archived, category, date_from, date_to, searc
 async function createExpense(req, input) {
   const expense = await Expense.create({
     ...createScope(req),
+    ...syncFields(req),
     category: input.category,
     amount: round2(input.amount),
     remark: input.remark ?? null,

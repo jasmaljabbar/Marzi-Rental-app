@@ -1,3 +1,4 @@
+import '../core/validation.dart';
 import 'package:flutter/material.dart';
 import '../app/controller.dart';
 import '../core/models.dart';
@@ -50,8 +51,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
       reload();
       await future;
     },
-    child: ListView(
-      padding: const EdgeInsets.all(16),
+    child: PageList(
       children: [
         Section(
           widget.customers ? 'Customers' : 'Inventory',
@@ -233,7 +233,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   ),
                   Text('${money(item.number('rent_per_day'))}/day'),
                   Text(
-                    '${available(item)} available • ${item.number('damaged_count')} damaged',
+                    '${available(item)} available • ${item.count('damaged_count')} damaged',
                   ),
                   Wrap(
                     children: [
@@ -264,11 +264,12 @@ Future<void> stockForm(BuildContext context, Record item) async {
     OperationForm(
       title: 'Add Stock — ${item.name}',
       fields: const {'Quantity': '1', 'Unit Price (INR)': '0', 'Note': ''},
-      numbers: const {'Quantity', 'Unit Price (INR)'},
+      integers: const {'Quantity'},
+      numbers: const {'Unit Price (INR)'},
       submit: (v) async {
         await app.repo.save('/equipment/${item.id}/stock', {
-          'quantity_added': numValue(v['Quantity']),
-          'unit_price': numValue(v['Unit Price (INR)']),
+          'quantity_added': inputCount(v['Quantity']),
+          'unit_price': inputNumber(v['Unit Price (INR)']),
           'note': v['Note'],
         });
         app.changed();
@@ -294,7 +295,7 @@ Future<void> maintenanceForm(
           'equipment_id': item.id,
           'action': action,
           'remark': v['Remark'],
-          'cost': numValue(v['Cost (INR)']),
+          'cost': inputNumber(v['Cost (INR)']),
           'photos': <String>[],
         });
         app.changed();
@@ -348,8 +349,7 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
             .firstOrNull;
         if (item == null) return const Empty('Equipment not found');
         final app = AppScope.of(context);
-        return ListView(
-          padding: const EdgeInsets.all(16),
+        return PageList(
           children: [
             Picture(item.strings('images').firstOrNull ?? '', height: 220),
             Section(item.name),
@@ -389,13 +389,13 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
                     OperationForm(
                       title: 'Mark as scrap',
                       fields: const {'Quantity': '1', 'Remark': ''},
-                      numbers: const {'Quantity'},
+                      integers: const {'Quantity'},
                       submit: (v) async {
-                        if (numValue(v['Quantity']) <= 0) {
+                        if (inputCount(v['Quantity']) <= 0) {
                           throw Exception('Enter a valid scrap quantity');
                         }
                         await app.repo.save('/equipment/${item.id}/scrap', {
-                          'quantity': numValue(v['Quantity']),
+                          'quantity': inputCount(v['Quantity']),
                           'remark': v['Remark']!.trim().isEmpty
                               ? 'Marked as scrap'
                               : v['Remark'],
@@ -507,35 +507,39 @@ class _SaleFormState extends State<SaleForm> {
     children: [
       Section('Sell ${widget.item.name}'),
       DropdownButtonFormField<String>(
+        isExpanded: true,
         decoration: const InputDecoration(labelText: 'Customer'),
         items: widget.customers
             .map(
               (c) => DropdownMenuItem(
                 value: c.id,
-                child: Text('${c.name} • ${c.text('phone')}'),
+                child: Text(
+                  '${c.name} • ${c.text('phone')}',
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             )
             .toList(),
         onChanged: (v) => customer = v ?? '',
       ),
       const SizedBox(height: 16),
-      Field('Quantity', quantity, number: true),
+      Field('Quantity', quantity, integer: true, required: true, min: 1, max: available(widget.item)),
       Field('Selling price / unit', price, number: true),
       Field('Amount paid', paid, number: true),
-      Field('Remark', remark),
+      Field('Remark', remark, maxLength: 1000),
       ActionButton('Record sale', () async {
         if (customer.isEmpty) {
           throw Exception('Select a customer for this sale');
         }
-        if (numValue(quantity.text) <= 0) {
+        if (inputCount(quantity.text) <= 0) {
           throw Exception('Enter a valid sale quantity');
         }
         final app = AppScope.of(context);
         await app.repo.save('/equipment/${widget.item.id}/sell', {
           'customer_id': customer,
-          'quantity': numValue(quantity.text),
-          'selling_price': numValue(price.text),
-          'amount_paid': numValue(paid.text),
+          'quantity': inputCount(quantity.text),
+          'selling_price': inputNumber(price.text),
+          'amount_paid': inputNumber(paid.text),
           'remark': remark.text,
         });
         app.changed();
@@ -575,8 +579,7 @@ class _MasterScreenState extends State<MasterScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Category Master')),
-    body: ListView(
-      padding: const EdgeInsets.all(16),
+    body: PageList(
       children: [
         Section(
           'Categories',
@@ -661,44 +664,46 @@ class _DamagedScreenState extends State<DamagedScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => DataView(
-    future: future!,
-    builder: (items) {
-      final damaged = items
-          .where((e) => e.number('damaged_count') > 0)
-          .toList();
-      return ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const Section('Damaged Equipment'),
-          if (damaged.isEmpty) const Empty('No damaged equipment'),
-          ...damaged.map(
-            (e) => Panel(
-              children: [
-                Section(e.name),
-                Text('${e.number('damaged_count')} damaged units'),
-                ...e
-                    .records('maintenance_logs')
-                    .where((l) => l.text('action') == 'Damage')
-                    .map(
-                      (l) => Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${dateText(l.text('created_at'))} • ${l.text('remark')}',
-                          ),
-                          ...l.strings('photos').map((p) => Picture(p)),
-                        ],
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Damaged')),
+    body: DataView(
+      future: future!,
+      builder: (items) {
+        final damaged = items
+            .where((e) => e.count('damaged_count') > 0)
+            .toList();
+        return PageList(
+          children: [
+            const Section('Damaged Equipment'),
+            if (damaged.isEmpty) const Empty('No damaged equipment'),
+            ...damaged.map(
+              (e) => Panel(
+                children: [
+                  Section(e.name),
+                  Text('${e.count('damaged_count')} damaged units'),
+                  ...e
+                      .records('maintenance_logs')
+                      .where((l) => l.text('action') == 'Damage')
+                      .map(
+                        (l) => Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${dateText(l.text('created_at'))} • ${l.text('remark')}',
+                            ),
+                            ...l.strings('photos').map((p) => Picture(p)),
+                          ],
+                        ),
                       ),
-                    ),
-                ActionButton('Mark Repaired', () async {
-                  await maintenanceForm(context, e, 'Repair');
-                }),
-              ],
+                  ActionButton('Mark Repaired', () async {
+                    await maintenanceForm(context, e, 'Repair');
+                  }),
+                ],
+              ),
             ),
-          ),
-        ],
-      );
-    },
+          ],
+        );
+      },
+    ),
   );
 }

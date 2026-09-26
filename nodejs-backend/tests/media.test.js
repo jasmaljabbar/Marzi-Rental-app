@@ -49,9 +49,9 @@ describe("profile photos and equipment images", () => {
   describe("customer photos in lists", () => {
     it("returns a loadable photo and thumbnail in the customer list, and nulls when there is no photo", async () => {
       const photo = await upload(owner, "customer_photo");
-      const withPhoto = await owner.post("/customers").send({ name: "Jasmal", phone: "5550100", photo_url: photo.url });
+      const withPhoto = await owner.post("/customers").send({ name: "Jasmal", phone: "9875550100", photo_url: photo.url });
       assert.equal(withPhoto.status, 201);
-      await owner.post("/customers").send({ name: "Noor", phone: "5550101" });
+      await owner.post("/customers").send({ name: "Noor", phone: "9875550101" });
 
       const list = (await owner.get("/customers")).body;
       const jasmal = list.find((c) => c.name === "Jasmal");
@@ -73,14 +73,15 @@ describe("profile photos and equipment images", () => {
 
     it("embeds the customer's photo thumbnail in rentals and dashboard alerts", async () => {
       const photo = await upload(owner, "customer_photo");
-      const customer = (await owner.post("/customers").send({ name: "Jasmal", phone: "5550102", photo_url: photo.key })).body;
+      const customer = (await owner.post("/customers").send({ name: "Jasmal", phone: "9875550102", photo_url: photo.key })).body;
       const plain = await h.createCustomer(owner);
       const eq = await h.createEquipment(owner, { stock: 5 });
       const rental = (await owner.post("/rentals").send({ customer_id: customer.id, equipment_id: eq.id })).body;
       assert.ok(rental.customer.photo_thumb_url, "create response");
       await owner.post("/rentals").send({ customer_id: plain.id, equipment_id: eq.id });
       const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      await owner.put(`/rentals/${rental.id}`).send({ expected_return_date: yesterday });
+      await h.backdateRental(rental.id, 2);
+    await owner.put(`/rentals/${rental.id}`).send({ expected_return_date: yesterday });
 
       const alerts = (await owner.get("/reports/dashboard")).body.alerts;
       const alert = alerts.find((a) => a.rental.customer.name === "Jasmal");
@@ -93,13 +94,13 @@ describe("profile photos and equipment images", () => {
 
     it("keeps a customer photo that is private to its business", async () => {
       const photo = await upload(owner, "customer_photo");
-      const customer = (await owner.post("/customers").send({ name: "Jasmal", phone: "5550103", photo_url: photo.key })).body;
+      const customer = (await owner.post("/customers").send({ name: "Jasmal", phone: "9875550103", photo_url: photo.key })).body;
       const key = new URL(customer.photo_thumb_url).pathname;
       assert.equal((await h.request(app).get(key)).status, 403, "an unsigned link is refused");
 
       const other = await h.registerBusiness(app);
       assert.equal((await other.get(`/customers/${customer.id}`)).status, 404);
-      const reuse = await other.post("/customers").send({ name: "Copy", phone: "5550104", photo_url: customer.photo_url });
+      const reuse = await other.post("/customers").send({ name: "Copy", phone: "9875550104", photo_url: customer.photo_url });
       assert.equal(reuse.status, 400);
       assert.equal(reuse.body.code, "INVALID_FILE_REF");
     });

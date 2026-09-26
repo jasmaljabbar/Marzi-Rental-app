@@ -1,4 +1,4 @@
-import 'dart:math' as math;
+import '../core/validation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../app/controller.dart';
@@ -45,8 +45,7 @@ class _RentalsScreenState extends State<RentalsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.all(16),
+  Widget build(BuildContext context) => PageList(
     children: [
       Section(
         'Rentals',
@@ -58,14 +57,15 @@ class _RentalsScreenState extends State<RentalsScreen> {
               )
             : null,
       ),
-      Row(
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
         children: [
           ChoiceChip(
             label: const Text('Ongoing'),
             selected: !history,
             onSelected: (_) => setState(() => history = false),
           ),
-          const SizedBox(width: 8),
           ChoiceChip(
             label: const Text('History'),
             selected: history,
@@ -239,7 +239,7 @@ class RentalCard extends StatelessWidget {
             StatusPill(status),
           ],
         ),
-        Text('${c?.name ?? ''} • Qty ${rental.number('quantity', 1)}'),
+        Text('${c?.name ?? ''} • Qty ${rental.count('quantity', 1)}'),
         Text('Rented ${dateText(rental.text('rented_at'), time: true)}'),
         if (expected != null)
           Text(
@@ -257,7 +257,7 @@ class RentalCard extends StatelessWidget {
           children: [
             _RentalFact(
               icon: Icons.inventory_2_outlined,
-              text: 'Qty ${rental.number('quantity', 1)}',
+              text: 'Qty ${rental.count('quantity', 1)}',
             ),
             _RentalFact(
               icon: Icons.payments_outlined,
@@ -377,17 +377,13 @@ class RentalEditForm extends StatefulWidget {
 }
 
 class _RentalEditFormState extends State<RentalEditForm> {
-  late final qty = TextEditingController(
-        text: widget.rental.text('quantity', '1'),
-      ),
-      advance = TextEditingController(
+  late final advance = TextEditingController(
         text: widget.rental.text('advance_amount', '0'),
       ),
       remark = TextEditingController(text: widget.rental.text('remark'));
   late String expected = widget.rental.text('expected_return_date');
   @override
   void dispose() {
-    qty.dispose();
     advance.dispose();
     remark.dispose();
     super.dispose();
@@ -399,7 +395,12 @@ class _RentalEditFormState extends State<RentalEditForm> {
     children: [
       const Section('Rental Details'),
       Text('Rented ${dateText(widget.rental.text('rented_at'), time: true)}'),
-      Field('Quantity', qty, number: true),
+      // Fixed once rented: the API does not change the quantity of an active
+      // rental, so it is shown rather than offered as an input.
+      Padding(
+        padding: const EdgeInsets.only(top: 4, bottom: 14),
+        child: Text('Quantity ${widget.rental.count('quantity', 1)}'),
+      ),
       DateField(
         label: 'Expected return date',
         value: expected,
@@ -407,12 +408,13 @@ class _RentalEditFormState extends State<RentalEditForm> {
         onChanged: (v) => setState(() => expected = v),
       ),
       Field('Advance Amount', advance, number: true),
-      Field('Remark', remark, multiline: true),
+      Field('Remark', remark, multiline: true, maxLength: 1000),
       ActionButton('Save changes', () async {
+        final rented = widget.rental.text('rented_at');
+        if (expected.isNotEmpty && rented.length >= 10 && expected.compareTo(rented.substring(0, 10)) < 0) throw const InputProblem('Expected return date cannot be earlier than the rental date.');
         final app = AppScope.of(context);
         await app.repo.save('/rentals/${widget.rental.id}', {
-          'quantity': math.max(numValue(qty.text, 1), 1),
-          'advance_amount': numValue(advance.text),
+          'advance_amount': inputNumber(advance.text),
           'expected_return_date': expected.isEmpty ? null : expected,
           'remark': remark.text.isEmpty ? null : remark.text,
         }, update: true);
@@ -466,7 +468,7 @@ class _PaymentFormState extends State<PaymentForm> {
               ? '/equipment/sales/${widget.rental.id}/payment'
               : '/rentals/${widget.rental.id}/payment',
           {
-            'amount_paid': numValue(amount.text),
+            'amount_paid': inputNumber(amount.text),
             'payment_method': method,
             if (!widget.sale && due.isNotEmpty) 'due_date': due,
           },
@@ -489,9 +491,10 @@ class PaymentMethodPicker extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
     child: DropdownButtonFormField<String>(
+      isExpanded: true,
       initialValue: value,
       decoration: InputDecoration(labelText: label),
-      items: paymentMethods.map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
+      items: paymentMethods.map((m) => DropdownMenuItem(value: m, child: Text(m, overflow: TextOverflow.ellipsis))).toList(),
       onChanged: (v) => onChanged(v ?? 'Cash'),
     ),
   );
@@ -541,17 +544,17 @@ class _ReturnFormState extends State<ReturnForm> {
 
   Map<String, dynamic> body() => {
     'rental_ids': selected.map((r) => r.id).toList(),
-    'discount_amount': numValue(discount.text),
-    'late_fee_amount': numValue(lateFee.text),
-    'amount_paid': numValue(paid.text),
+    'discount_amount': inputNumber(discount.text),
+    'late_fee_amount': inputNumber(lateFee.text),
+    'amount_paid': inputNumber(paid.text),
     'payment_method': method,
     if (due.isNotEmpty) 'due_date': due,
     if (damage && selected.length == 1)
       'damages': [
         {
           'rental_id': selected.first.id,
-          'amount': numValue(damageCost.text),
-          'damaged_quantity': numValue(damageUnits.text).toInt(),
+          'amount': inputNumber(damageCost.text),
+          'damaged_quantity': inputCount(damageUnits.text),
           'photos': photos,
           if (damageRemark.text.trim().isNotEmpty) 'remark': damageRemark.text.trim(),
         },
@@ -594,8 +597,8 @@ class _ReturnFormState extends State<ReturnForm> {
             title: Text(_name(r)),
             subtitle: Text(
               line == null
-                  ? 'Qty ${r.number('quantity', 1).toInt()}'
-                  : 'Qty ${line.number('quantity').toInt()} • ${line.number('days').toInt()} day(s) × ${money(line.number('daily_rate'))}',
+                  ? 'Qty ${r.count('quantity', 1)}'
+                  : 'Qty ${line.count('quantity')} • ${line.count('days')} day(s) × ${money(line.number('daily_rate'))}',
             ),
             trailing: widget.batch && selected.length > 1
                 ? IconButton(
@@ -627,14 +630,14 @@ class _ReturnFormState extends State<ReturnForm> {
           ),
           if (damage) ...[
             Field('Damage charge', damageCost, number: true, onChanged: (_) => refresh()),
-            Field('Units damaged', damageUnits, number: true),
-            Field('Describe the damage', damageRemark),
+            Field('Units damaged', damageUnits, integer: true, required: true, max: selected.first.count('quantity')),
+            Field('Describe the damage', damageRemark, maxLength: 1000),
             ...photos.map((p) => Picture(p, height: 100)),
             if (photos.length < 4)
               ActionButton('Add damage photo', () async {
                 final url = await uploadImage(AppScope.of(context), kind: UploadKind.damage);
                 if (url != null && mounted) setState(() => photos.add(url));
-              }),
+              }, validateForm: false),
           ],
         ],
         const SizedBox(height: 8),
@@ -648,7 +651,7 @@ class _ReturnFormState extends State<ReturnForm> {
               _TotalRow('Rent', money(totals.number('gross_amount'))),
               if (totals.number('discount_amount') > 0)
                 _TotalRow(
-                  totals.json['discount_capped'] == true ? 'Discount (capped at ${totals.number('discount_cap_percent').toStringAsFixed(0)}%)' : 'Discount',
+                  totals.json['discount_capped'] == true ? 'Discount (capped at ${decimalText(totals.number('discount_cap_percent'))}%)' : 'Discount',
                   '− ${money(totals.number('discount_amount'))}',
                 ),
               if (totals.number('late_fee_amount') > 0) _TotalRow('Late fee', '+ ${money(totals.number('late_fee_amount'))}'),
@@ -698,7 +701,10 @@ class _ReturnFormState extends State<ReturnForm> {
           context: context,
           builder: (c) => AlertDialog(
             title: const Text('Scan to pay'),
-            content: SizedBox(width: 260, child: Picture(qr, height: 260)),
+            content: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 260),
+              child: Picture(qr, height: 260, fit: BoxFit.contain),
+            ),
             actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('Done'))],
           ),
         );
@@ -783,8 +789,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
             history = data[2]
                 .where((r) => r.text('customer_id') == customer.id)
                 .toList();
-        return ListView(
-          padding: const EdgeInsets.all(16),
+        return PageList(
           children: [
             Panel(
               children: [
@@ -855,7 +860,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                         'Equipment',
                   ),
                   Text(
-                    'Quantity ${s.number('quantity')} • ${money(s.number('total_price'))}',
+                    'Quantity ${s.count('quantity')} • ${money(s.number('total_price'))}',
                   ),
                   Text('Due ${money(s.number('amount_due'))}'),
                   StatusPill(s.text('payment_status')),

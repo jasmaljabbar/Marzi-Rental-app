@@ -1,4 +1,4 @@
-const { z, objectId, money, quantity, optionalText, dateInput, booleanQuery, pageQuery } = require("../lib/validate");
+const { numeric, dateOrder, z, objectId, money, quantity, optionalText, dateInput, booleanQuery, pageQuery } = require("../lib/validate");
 const { paymentMethod } = require("./catalog");
 
 const expectedDate = dateInput.nullish();
@@ -34,7 +34,7 @@ const cancel = z.object({ refund_advance: z.boolean().optional(), payment_method
 const damage = z.object({
   rental_id: objectId,
   amount: money.optional().default(0),
-  damaged_quantity: z.coerce.number().int().min(0).max(100000).optional(),
+  damaged_quantity: numeric.pipe(z.number().int().min(0).max(100000)).optional(),
   photos: z.array(z.string().max(2000)).max(6).optional(),
   remark: optionalText(1000),
 });
@@ -44,7 +44,7 @@ const returnFields = {
   late_fee_amount: money.optional(),
   damage_amount: money.optional(),
   damages: z.array(damage).max(50).optional(),
-  tax_rate_percent: z.coerce.number().min(0).max(100).optional(),
+  tax_rate_percent: numeric.pipe(z.number().min(0).max(100)).optional(),
   amount_paid: money.optional(),
   due_date: dateInput.nullish(),
   payment_method: paymentMethod,
@@ -58,10 +58,10 @@ const complete = z.object({
   amount_paid_on_return: money.optional(),
   late_fee_amount: money.optional(),
   damage_amount: money.optional(),
-  damage_quantity: z.coerce.number().int().min(0).optional(),
+  damage_quantity: numeric.pipe(z.number().int().min(0)).optional(),
   damage_photos: z.array(z.string().max(2000)).max(6).optional(),
   damage_remark: optionalText(1000),
-  tax_rate_percent: z.coerce.number().min(0).max(100).optional(),
+  tax_rate_percent: numeric.pipe(z.number().min(0).max(100)).optional(),
   due_date: dateInput.nullish(),
   payment_method: paymentMethod,
 });
@@ -81,7 +81,7 @@ const listQuery = z.object({
   customer_id: objectId.optional(),
   order_id: z.string().max(64).optional(),
   search: z.string().max(100).optional(),
-});
+}).superRefine((v, ctx) => dateOrder(v, ctx));
 
 const historyQuery = z.object({
   ...pageQuery,
@@ -90,7 +90,7 @@ const historyQuery = z.object({
   date_to: dateInput.optional(),
   customer_id: objectId.optional(),
   search: z.string().max(100).optional(),
-});
+}).superRefine((v, ctx) => dateOrder(v, ctx));
 
 const invoiceQuery = z.object({
   ...pageQuery,
@@ -99,12 +99,12 @@ const invoiceQuery = z.object({
   date_from: dateInput.optional(),
   date_to: dateInput.optional(),
   customer_id: objectId.optional(),
-});
+}).superRefine((v, ctx) => dateOrder(v, ctx));
 
 const rangeQuery = z.object({
   start_date: dateInput,
   end_date: dateInput,
   tz: z.coerce.number().int().min(-840).max(840).optional().default(0),
-});
+}).superRefine((v, ctx) => dateOrder(v, ctx, "start_date", "end_date"));
 
 module.exports = { createSingle, createBulk, updateActive, cancel, batchReturn, complete, payment, listQuery, historyQuery, invoiceQuery, rangeQuery };

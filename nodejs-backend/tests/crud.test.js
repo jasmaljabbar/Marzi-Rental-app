@@ -56,8 +56,8 @@ describe("resource contracts", () => {
   });
 
   it("customers: update, phone lookup, archive, statement PDF, delete rules", async () => {
-    const c = await h.createCustomer(owner, { name: "Pat", phone: "555-0100" });
-    assert.equal((await owner.get("/customers/5550100")).body.id, c.id, "lookup by normalised phone");
+    const c = await h.createCustomer(owner, { name: "Pat", phone: "9875550100" });
+    assert.equal((await owner.get("/customers/9875550100")).body.id, c.id, "lookup by normalised phone");
     assert.equal((await owner.get(`/customers/${c.id}`)).body.name, "Pat", "lookup by id");
     assert.equal((await owner.put(`/customers/${c.id}`).send({ address: "12 Main St" })).body.address, "12 Main St");
     assert.equal((await owner.get("/customers?search=555")).body.length, 1);
@@ -76,7 +76,7 @@ describe("resource contracts", () => {
   });
 
   it("expenses: CRUD, archive, validation and recurring generation without duplicates", async () => {
-    const e = await owner.post("/expenses").send({ category: "Fuel", amount: "12.345", payment_mode: "UPI" });
+    const e = await owner.post("/expenses").send({ category: "Fuel", amount: "12.35", payment_mode: "UPI" });
     assert.equal(e.status, 201);
     assert.equal(e.body.amount, 12.35);
     assert.equal((await owner.post("/expenses").send({ category: "Fuel", amount: -5 })).status, 400);
@@ -146,8 +146,9 @@ describe("resource contracts", () => {
     assert.equal(me.body.plan.key, "trial");
   });
 
-  it("settings: per-shop keys, clamped values, QR code files", async () => {
-    assert.equal((await owner.put("/settings/max_discount_percent").send({ value: "250" })).body.value, "100");
+  it("settings: per-shop keys, rejected invalid values, QR code files", async () => {
+    assert.equal((await owner.put("/settings/max_discount_percent").send({ value: "250" })).status, 400);
+    assert.equal((await owner.put("/settings/max_discount_percent").send({ value: "100" })).body.value, "100");
     assert.equal((await owner.get("/settings/max_discount_percent")).body.value, "100");
     assert.equal((await owner.put("/settings/bad key").send({ value: "1" })).status, 400);
     const qr = await owner.post("/upload?kind=qr_code").attach("file", await h.pngBuffer(), { filename: "q.png", contentType: "image/png" });

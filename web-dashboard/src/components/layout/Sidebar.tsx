@@ -112,7 +112,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       {isOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
           <div className="absolute inset-0 bg-slate-900/50" onClick={onClose} aria-hidden="true" />
-          <aside className="relative h-full w-64 border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+          <aside className="relative h-full w-64 overflow-y-auto border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
             {content}
           </aside>
         </div>

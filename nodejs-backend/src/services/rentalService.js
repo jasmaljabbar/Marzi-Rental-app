@@ -98,7 +98,7 @@ async function createRentals(req, { customer_id, items, expected_return_date, ad
 
   const rentedAt = new Date();
   const expected = expected_return_date || null;
-  if (expected && expected.getTime() < rentedAt.getTime() - MS_PER_DAY) {
+  if (expected && expected.toISOString().slice(0, 10) < rentedAt.toISOString().slice(0, 10)) {
     throw badRequest("Expected return date can't be in the past.", "VALIDATION_ERROR");
   }
 
@@ -186,6 +186,9 @@ async function updateActiveRental(req, id, { expected_return_date, advance_amoun
   return withTransaction(async (session) => {
     const rental = await findActive(req, id, session);
     const nextExpected = expected_return_date !== undefined ? expected_return_date : rental.expectedReturnDate;
+    if (expected_return_date && expected_return_date.toISOString().slice(0, 10) < rental.rentedAt.toISOString().slice(0, 10)) {
+      throw badRequest("Expected return date cannot be earlier than the rental date.", "VALIDATION_ERROR");
+    }
     const nextAdvance = advance_amount !== undefined ? round2(advance_amount) : rental.advanceAmount;
 
     if (advance_amount !== undefined || expected_return_date !== undefined) {
@@ -417,7 +420,8 @@ async function completeReturn(req, input) {
       const photoKeys = damage?.photos?.length ? (await normalizeFileRefs(damage.photos, { req, kinds: ["damage", "equipment"] })).slice(0, 6) : [];
       const reported = result.damage_amount > 0 || photoKeys.length > 0;
       const damagedQuantity = damage?.damaged_quantity !== undefined ? damage.damaged_quantity : damage && reported ? 1 : 0;
-      const damaged = Math.min(Math.max(damagedQuantity, 0), rental.quantity);
+      if (damagedQuantity > rental.quantity) throw badRequest("Damaged quantity cannot exceed rented quantity.", "VALIDATION_ERROR");
+      const damaged = damagedQuantity;
 
       await stock.returnFromRental(req, rental.equipmentId, rental.quantity, { damaged, session });
       if (damaged > 0) {

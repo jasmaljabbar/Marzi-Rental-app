@@ -17,6 +17,10 @@ dependencies:
   path_provider: ^2.1.6
   url_launcher: ^6.3.2
   flutter_secure_storage: ^11.2.0
+  phone_numbers_parser: ^9.0.26
+  uuid: ^4.6.0
+  sembast: ^3.8.11
+  sembast_web: ^2.4.6
 dev_dependencies:
   flutter_test:
     sdk: flutter

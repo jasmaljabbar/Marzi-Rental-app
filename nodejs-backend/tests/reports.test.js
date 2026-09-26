@@ -21,6 +21,7 @@ describe("reports and dashboard (P2-2)", () => {
     const eq = await h.createEquipment(owner, { rentPerDay: 100, stock: 4 });
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const overdue = (await owner.post("/rentals").send({ customer_id: customer.id, equipment_id: eq.id, quantity: 2, advance_amount: 50 })).body;
+    await h.backdateRental(overdue.id, 2);
     await owner.put(`/rentals/${overdue.id}`).send({ expected_return_date: yesterday });
     const done = (await owner.post("/rentals").send({ customer_id: customer.id, equipment_id: eq.id })).body;
     await owner.post(`/rentals/${done.id}/complete`).send({ amount_paid_on_return: 30 });

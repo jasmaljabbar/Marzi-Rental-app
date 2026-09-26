@@ -1,3 +1,6 @@
+const { replayCreate } = require("../middleware/replayCreate");
+const Category = require("../models/Category");
+const { categoryDto } = require("../dto");
 const c = require("../controllers/categoryController");
 const v = require("../validators/catalog");
 const { tenantRouter } = require("./_helpers");
@@ -6,7 +9,7 @@ const { validate, idParams } = require("../lib/validate");
 
 const router = tenantRouter();
 router.get("/", validate({ query: v.listQuery }), c.list);
-router.post("/", adminOnly, validate({ body: v.categoryCreate }), c.create);
+router.post("/", adminOnly, validate({ body: v.categoryCreate }), replayCreate(Category, categoryDto), c.create);
 router.post("/reorder", adminOnly, validate({ body: v.categoryReorder }), c.reorder);
 router.put("/:id", adminOnly, validate({ params: idParams, body: v.categoryUpdate }), c.update);
 router.delete("/:id", adminOnly, validate({ params: idParams }), c.remove);

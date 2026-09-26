@@ -1,3 +1,4 @@
+const { syncFields } = require("../lib/sync");
 const Category = require("../models/Category");
 const Equipment = require("../models/Equipment");
 const { shopFilter, createScope, findOwned } = require("../lib/tenantScope");
@@ -8,6 +9,7 @@ async function createCategory(req, { name, icon }) {
   const last = await Category.findOne(shopFilter(req)).sort({ sortOrder: -1 }).select("sortOrder").lean();
   const category = await Category.create({
     ...createScope(req),
+    ...syncFields(req),
     name,
     nameKey: nameKey(name),
     icon: icon || null,

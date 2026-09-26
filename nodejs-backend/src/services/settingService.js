@@ -1,6 +1,7 @@
 const Setting = require("../models/Setting");
 const { normalizeFileRef } = require("../storage");
-const { clamp } = require("../lib/money");
+const { numeric } = require("../lib/validate");
+const { badRequest } = require("../lib/errors");
 
 // Keys whose value can differ per shop; every other key is business-wide.
 const SHOP_SCOPED_KEYS = ["qr_code", "low_stock_threshold"];
@@ -38,11 +39,12 @@ async function getSettingValue(accountId, shopId, key) {
 
 async function updateSetting(req, key, rawValue) {
   let value = rawValue === undefined || rawValue === null ? null : String(rawValue);
-  if (value !== null && ["max_discount_percent"].includes(key) && value !== "") {
-    value = String(clamp(Number(value) || 0, 0, 100));
-  }
-  if (value !== null && key === "low_stock_threshold" && value !== "") {
-    value = String(Math.max(Math.floor(Number(value) || 0), 0));
+  if (value !== null && value !== "" && ["max_discount_percent", "low_stock_threshold"].includes(key)) {
+    const parsed = numeric.safeParse(rawValue);
+    if (!parsed.success || parsed.data < 0 || (key === "max_discount_percent" ? parsed.data > 100 : !Number.isSafeInteger(parsed.data))) {
+      throw badRequest(key === "max_discount_percent" ? "Discount must be between 0 and 100." : "Low stock threshold must be a non-negative whole number.", "VALIDATION_ERROR");
+    }
+    value = String(parsed.data);
   }
   const scope = scopeFor(req, key);
   if (FILE_KEYS[key]) {

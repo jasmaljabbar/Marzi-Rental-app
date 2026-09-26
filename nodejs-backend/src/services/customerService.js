@@ -1,3 +1,5 @@
+const { syncFields } = require("../lib/sync");
+const { phoneKeys } = require("../lib/phone");
 const Customer = require("../models/Customer");
 const Rental = require("../models/Rental");
 const EquipmentSale = require("../models/EquipmentSale");
@@ -20,13 +22,13 @@ function listFilter(req, { search, include_archived }) {
 }
 
 async function findByPhone(req, phone) {
-  const customer = await Customer.findOne(shopFilter(req, { phoneNormalized: normalizePhone(phone), isArchived: { $ne: true } })).lean();
+  const customer = await Customer.findOne(shopFilter(req, { phoneNormalized: { $in: phoneKeys(phone) }, isArchived: { $ne: true } })).lean();
   if (!customer) throw notFound("Customer not found.");
   return customer;
 }
 
 async function assertPhoneFree(req, shopId, phoneNormalized, exceptId) {
-  const filter = { accountId: req.tenant.accountId, shopId, phoneNormalized, isArchived: { $ne: true } };
+  const filter = { accountId: req.tenant.accountId, shopId, phoneNormalized: { $in: phoneKeys(phoneNormalized) }, isArchived: { $ne: true } };
   if (exceptId) filter._id = { $ne: exceptId };
   if (await Customer.exists(filter)) {
     throw conflict("A customer with this phone number is already registered in this shop.", "DUPLICATE_PHONE");
@@ -38,6 +40,7 @@ async function createCustomer(req, { name, phone, address, doc_url, photo_url })
   await assertPhoneFree(req, req.tenant.shopId, phoneNormalized);
   const customer = await Customer.create({
     ...createScope(req),
+    ...syncFields(req),
     name,
     phone,
     phoneNormalized,

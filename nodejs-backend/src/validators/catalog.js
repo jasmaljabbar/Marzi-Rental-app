@@ -1,4 +1,5 @@
-const { z, objectId, money, quantity, optionalText, requiredText, dateInput, booleanQuery, pageQuery } = require("../lib/validate");
+const { phone, optionalPhone } = require("../lib/phone");
+const { numeric, email, dateOrder, z, objectId, money, quantity, optionalText, requiredText, dateInput, booleanQuery, pageQuery } = require("../lib/validate");
 const { CATEGORY_ICONS } = require("../config/categoryIcons");
 const { CURRENCY_CODES } = require("../config/currencies");
 const { PAYMENT_METHODS } = require("../models/Payment");
@@ -6,7 +7,7 @@ const { PAYMENT_METHODS } = require("../models/Payment");
 const fileRef = z.string().trim().max(2000);
 const paymentMethod = z.enum(PAYMENT_METHODS).optional();
 
-const categoryCreate = z.object({ name: requiredText(80), icon: z.enum(CATEGORY_ICONS).nullish() });
+const categoryCreate = z.object({ sync_id: z.uuid().optional(), name: requiredText(80), icon: z.enum(CATEGORY_ICONS).nullish() });
 const categoryUpdate = z.object({ name: requiredText(80).optional(), icon: z.enum(CATEGORY_ICONS).nullish() });
 const categoryReorder = z.object({ ordered_ids: z.array(objectId).min(1, "must list at least one category").max(1000) });
 const listQuery = z.object({
@@ -16,21 +17,25 @@ const listQuery = z.object({
   include_stats: booleanQuery.optional(),
 });
 
-const equipmentCreate = z.object({
+const equipmentBase = z.object({
+  sync_id: z.uuid().optional(),
   name: requiredText(120),
   description: optionalText(2000),
-  stock_count: z.coerce.number().int("must be a whole number").min(0).max(1_000_000).optional(),
-  damaged_count: z.coerce.number().int().min(0).optional(),
+  stock_count: numeric.pipe(z.number().int("Stock count must be a whole number.").min(0).max(1_000_000)).optional(),
+  damaged_count: numeric.pipe(z.number().int().min(0)).optional(),
   rent_per_day: money.optional(),
   deposit_amount: money.optional(),
   purchase_price_per_unit: money.optional(),
-  useful_life_years: z.coerce.number().min(0).max(100).optional(),
+  useful_life_years: numeric.pipe(z.number().min(0).max(100)).optional(),
   category_id: objectId,
   // Payload ceiling only. The photo limit itself (4) is enforced by the
   // service, which lets items saved before the limit keep their extra photos.
   images: z.array(fileRef).max(20).optional(),
 });
-const equipmentUpdate = equipmentCreate.omit({ stock_count: true, damaged_count: true }).partial();
+const equipmentCreate = equipmentBase.superRefine((v, ctx) => {
+  if ((v.damaged_count || 0) > (v.stock_count || 0)) ctx.addIssue({ code: "custom", path: ["damaged_count"], message: "Damaged count cannot exceed stock count." });
+});
+const equipmentUpdate = equipmentBase.omit({ sync_id: true, stock_count: true, damaged_count: true }).partial();
 const equipmentList = listQuery.extend({ category_id: objectId.optional() });
 const addStock = z.object({ quantity_added: quantity, unit_price: money.optional(), note: optionalText(500) });
 const scrap = z.object({ quantity, remark: optionalText(500) });
@@ -49,7 +54,7 @@ const salesQuery = z.object({
   equipment_id: objectId.optional(),
   payment_status: z.enum(["Pending", "Partial", "Paid"]).optional(),
 });
-const salesSummaryQuery = z.object({ start_date: dateInput.optional(), end_date: dateInput.optional() });
+const salesSummaryQuery = z.object({ start_date: dateInput.optional(), end_date: dateInput.optional() }).superRefine((v, ctx) => dateOrder(v, ctx, "start_date", "end_date"));
 const maintenance = z.object({
   equipment_id: objectId,
   action: z.enum(["Damage", "Repair"], { error: 'must be "Damage" or "Repair"' }),
@@ -62,15 +67,17 @@ const maintenance = z.object({
 });
 
 const customerCreate = z.object({
+  sync_id: z.uuid().optional(),
   name: requiredText(120),
-  phone: requiredText(40).refine((v) => v.replace(/\D/g, "").length >= 5, "must contain at least 5 digits"),
+  phone: phone,
   address: optionalText(500),
   doc_url: fileRef.nullish(),
   photo_url: fileRef.nullish(),
 });
-const customerUpdate = customerCreate.partial();
+const customerUpdate = customerCreate.omit({ sync_id: true }).partial();
 
 const expenseCreate = z.object({
+  sync_id: z.uuid().optional(),
   category: requiredText(80),
   amount: money,
   remark: optionalText(1000),
@@ -79,29 +86,29 @@ const expenseCreate = z.object({
   equipment_id: objectId.nullish(),
   date: dateInput.optional(),
 });
-const expenseUpdate = expenseCreate.partial();
-const expenseList = listQuery.extend({ category: z.string().max(80).optional(), date_from: dateInput.optional(), date_to: dateInput.optional() });
+const expenseUpdate = expenseCreate.omit({ sync_id: true }).partial();
+const expenseList = listQuery.extend({ category: z.string().max(80).optional(), date_from: dateInput.optional(), date_to: dateInput.optional() }).superRefine((v, ctx) => dateOrder(v, ctx));
 const recurringCreate = z.object({
   category: requiredText(80),
   amount: money,
   remark: optionalText(1000),
-  day_of_month: z.coerce.number().int().min(1, "must be between 1 and 28").max(28, "must be between 1 and 28"),
+  day_of_month: numeric.pipe(z.number().int().min(1, "must be between 1 and 28").max(28, "must be between 1 and 28")),
   equipment_id: objectId.nullish(),
 });
 const recurringUpdate = recurringCreate.partial().extend({ is_active: z.boolean().optional() });
 
-const shopCreate = z.object({ name: requiredText(120), address: optionalText(500), phone: optionalText(40) });
+const shopCreate = z.object({ name: requiredText(120), address: optionalText(500), phone: optionalPhone });
 const shopUpdate = shopCreate.partial().extend({ is_active: z.boolean().optional() });
 
 const companyUpdate = z.object({
   company_name: requiredText(120).optional(),
   logo_url: fileRef.nullish(),
   address: optionalText(500),
-  phone: optionalText(40),
-  email: z.string().trim().max(200).nullish(),
+  phone: optionalPhone,
+  email,
   tax_id: optionalText(60),
   footer_note: optionalText(1000),
-  default_tax_rate_percent: z.coerce.number().min(0).max(100).optional(),
+  default_tax_rate_percent: numeric.pipe(z.number().min(0).max(100)).optional(),
   currency: z.enum(CURRENCY_CODES, { error: "is not a supported currency" }).optional(),
 });
 

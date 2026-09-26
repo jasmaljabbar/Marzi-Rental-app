@@ -52,13 +52,13 @@ void main() {
       await api.request(
         'PUT',
         '/rentals/r1',
-        body: {'quantity': 0, 'remark': null},
+        body: {'advance_amount': 0, 'remark': null},
         query: {'include_cancelled': false, 'page': 0, 'search': ''},
       ),
       isEmpty,
     );
     expect(captured.headers['Authorization'], 'Bearer fixture');
-    expect(jsonDecode(captured.body), {'quantity': 0, 'remark': null});
+    expect(jsonDecode(captured.body), {'advance_amount': 0, 'remark': null});
     expect(captured.url.queryParameters, {
       'include_cancelled': 'false',
       'page': '0',

@@ -1,3 +1,6 @@
+const { replayCreate } = require("../middleware/replayCreate");
+const Equipment = require("../models/Equipment");
+const { equipmentDto } = require("../dto");
 const c = require("../controllers/equipmentController");
 const v = require("../validators/catalog");
 const { tenantRouter } = require("./_helpers");
@@ -12,7 +15,7 @@ router.get("/sales", adminOnly, validate({ query: v.salesQuery }), c.listSales);
 router.post("/sales/:id/payment", adminOnly, validate({ params: idParams, body: v.salePayment }), c.salePayment);
 router.post("/maintenance", requireFeature("maintenance"), validate({ body: v.maintenance }), c.maintenance);
 router.get("/:id", validate({ params: idParams }), c.get);
-router.post("/", adminOnly, enforceLimit("equipment"), validate({ body: v.equipmentCreate }), c.create);
+router.post("/", adminOnly, validate({ body: v.equipmentCreate }), replayCreate(Equipment, (doc, files) => equipmentDto(doc, [], files)), enforceLimit("equipment"), c.create);
 router.put("/:id", adminOnly, validate({ params: idParams, body: v.equipmentUpdate }), c.update);
 router.delete("/:id", adminOnly, validate({ params: idParams }), c.remove);
 router.post("/:id/archive", adminOnly, validate({ params: idParams }), c.archive);
