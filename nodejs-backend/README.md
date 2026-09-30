@@ -2,6 +2,8 @@
 
 Node 24 + Express 4 + MongoDB (Mongoose 8). Multi-tenant REST API for the web dashboard and the mobile app.
 
+For Vercel hosting, see [the Vercel setup and troubleshooting guide](VERCEL.md).
+
 ## Run locally
 
 Quickest way, with no Docker and no MongoDB install:
@@ -68,3 +70,10 @@ tests/               node:test suites (+ e2e-server.js used by the web app's Pla
 - The database stores file keys; URLs are generated per request.
 
 Full endpoint list: [API.md](../docs/API.md). Architecture: [ARCHITECTURE.md](../docs/ARCHITECTURE.md). Business flow: [RENTAL_FLOW.md](../docs/RENTAL_FLOW.md).
+# API documentation and demo testing
+
+The complete Postman collection, seeded environment, request schemas, response
+examples and verification results are in [`.postman/README.md`](.postman/README.md).
+Run `npm run docs:postman` to regenerate the reference, `npm run test:postman`
+to exercise every route against an isolated database, or `npm run seed:demo`
+to create a new demo business in the configured MongoDB database.

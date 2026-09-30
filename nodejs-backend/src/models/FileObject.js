@@ -15,6 +15,9 @@ const fileObjectSchema = new mongoose.Schema(
     width: { type: Number, default: null },
     height: { type: Number, default: null },
     thumbKey: { type: String, default: null },
+    storageDriver: { type: String, enum: ["local", "s3", "imagekit"], default: null },
+    providerFileId: { type: String, default: null },
+    providerThumbFileId: { type: String, default: null },
     createdBy: { type: ObjectId, ref: "User", default: null },
   },
   { timestamps: true }

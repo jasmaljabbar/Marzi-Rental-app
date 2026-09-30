@@ -3,6 +3,7 @@ const { badRequest } = require("../lib/errors");
 const FileObject = require("../models/FileObject");
 const { createLocalDriver } = require("./localDriver");
 const { createS3Driver } = require("./s3Driver");
+const { createImageKitDriver } = require("./imagekitDriver");
 const { processImage, toPngDataUri } = require("./imageProcessor");
 const { checkDeclaredImage, assertImageLimit, MAX_EQUIPMENT_IMAGES } = require("./uploadRules");
 const {
@@ -25,6 +26,10 @@ let driver;
 function getDriver() {
   if (driver) return driver;
   const env = getEnv();
+  if (env.STORAGE_DRIVER === "imagekit") {
+    driver = createImageKitDriver({ privateKey: env.IMAGEKIT_PRIVATE_KEY, urlEndpoint: env.IMAGEKIT_URL_ENDPOINT });
+    return driver;
+  }
   driver =
     env.STORAGE_DRIVER === "s3"
       ? createS3Driver({
@@ -177,20 +182,33 @@ async function uploadImage({ buffer, kind, accountId, userId }) {
   const key = newImageKey(accountId, kind);
   const thumbKey = thumbKeyFor(key);
   const store = getDriver();
-  await store.put(key, processed.full, "image/webp");
-  await store.put(thumbKey, processed.thumb, "image/webp");
-  await FileObject.create({
-    accountId,
-    key,
-    kind,
-    visibility: FILE_KINDS[kind],
-    contentType: "image/webp",
-    size: processed.full.length,
-    width: processed.width,
-    height: processed.height,
-    thumbKey,
-    createdBy: userId || null,
-  });
+  let full;
+  let thumb;
+  try {
+    full = await store.put(key, processed.full, "image/webp");
+    thumb = await store.put(thumbKey, processed.thumb, "image/webp");
+    await FileObject.create({
+      accountId,
+      key,
+      kind,
+      visibility: FILE_KINDS[kind],
+      contentType: "image/webp",
+      size: processed.full.length,
+      width: processed.width,
+      height: processed.height,
+      thumbKey,
+      storageDriver: store.name,
+      providerFileId: full?.fileId || null,
+      providerThumbFileId: thumb?.fileId || null,
+      createdBy: userId || null,
+    });
+  } catch (err) {
+    // Do not leave a private origin image behind if the second upload or DB
+    // registration fails. Never replace the original error with cleanup errors.
+    if (thumb?.fileId) await store.delete(thumbKey, thumb).catch(() => {});
+    if (full?.fileId) await store.delete(key, full).catch(() => {});
+    throw err;
+  }
   return { key, thumbKey };
 }
 

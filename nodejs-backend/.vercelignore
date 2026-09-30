@@ -1,0 +1,11 @@
+/node_modules
+/.env
+/.env.*
+/.postman
+/.dev-db
+/storage/
+/uploads/
+/tests
+!src/storage
+!src/storage/**
+

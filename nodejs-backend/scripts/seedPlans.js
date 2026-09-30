@@ -5,7 +5,6 @@
 //
 // Usage:
 //   node scripts/seedPlans.js
-require("dotenv").config();
 const mongoose = require("mongoose");
 const Plan = require("../src/models/Plan");
 
@@ -62,6 +61,7 @@ const PLANS = [
 ];
 
 async function main() {
+  require("dotenv").config();
   await mongoose.connect(process.env.MONGODB_URI);
 
   for (const plan of PLANS) {
@@ -82,7 +82,11 @@ async function main() {
   console.log("Done.");
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
+
+module.exports = { PLANS };

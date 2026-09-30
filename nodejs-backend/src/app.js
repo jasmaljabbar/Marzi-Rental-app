@@ -103,4 +103,7 @@ function createApp() {
   return app;
 }
 
-module.exports = { createApp };
+// Vercel discovers src/app.js and requires a callable default export. Keep
+// createApp available to the local server and isolated test harness as before.
+module.exports = require("./lib/serverless").createServerlessHandler(createApp);
+module.exports.createApp = createApp;

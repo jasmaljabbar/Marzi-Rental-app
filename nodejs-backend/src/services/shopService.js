@@ -4,6 +4,9 @@ const Equipment = require("../models/Equipment");
 const Customer = require("../models/Customer");
 const Rental = require("../models/Rental");
 const Expense = require("../models/Expense");
+const Category = require("../models/Category");
+const RecurringExpenseTemplate = require("../models/RecurringExpenseTemplate");
+const Setting = require("../models/Setting");
 const { badRequest, conflict, notFound } = require("../lib/errors");
 
 // Owners/admins see every shop (including inactive ones, so they can be
@@ -15,6 +18,9 @@ async function listShops(req) {
 }
 
 async function findShop(req, id) {
+  if (req.user.role === "staff" && !req.tenant.shopIds.some((shopId) => String(shopId) === String(id))) {
+    throw notFound("Shop not found.");
+  }
   const shop = await Shop.findOne({ _id: id, accountId: req.tenant.accountId });
   if (!shop) throw notFound("Shop not found.");
   return shop;
@@ -57,18 +63,24 @@ async function deleteShop(req, id) {
   if (total <= 1) throw badRequest("Cannot delete your only shop.", "LAST_SHOP");
   if (shop.isActive) await assertCanDeactivate(req, shop);
   const scope = { accountId: req.tenant.accountId, shopId: shop._id };
-  const [equipment, customers, rentals, expenses] = await Promise.all([
+  const [equipment, customers, rentals, expenses, categories, recurringExpenses, settings] = await Promise.all([
     Equipment.countDocuments(scope),
     Customer.countDocuments(scope),
     Rental.countDocuments(scope),
     Expense.countDocuments(scope),
+    Category.countDocuments(scope),
+    RecurringExpenseTemplate.countDocuments(scope),
+    Setting.countDocuments(scope),
   ]);
-  if (equipment + customers + rentals + expenses > 0) {
+  if (equipment + customers + rentals + expenses + categories + recurringExpenses + settings > 0) {
     throw conflict("This shop has records. Deactivate it instead of deleting it.", "SHOP_NOT_EMPTY", {
       equipment,
       customers,
       rentals,
       expenses,
+      categories,
+      recurring_expenses: recurringExpenses,
+      settings,
     });
   }
   await Shop.deleteOne({ _id: shop._id, accountId: req.tenant.accountId });

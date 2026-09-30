@@ -95,7 +95,7 @@ async function deleteAccount(id, actor) {
   if (!account) throw notFound("Account not found.");
   const accountId = account._id;
 
-  const files = await FileObject.find({ accountId }).select("key thumbKey").lean();
+  const files = await FileObject.find({ accountId }).select("key thumbKey providerFileId providerThumbFileId").lean();
   for (const name of TENANT_MODELS) {
     await mongoose.model(name).deleteMany({ accountId }).setOptions(skip);
   }
@@ -107,8 +107,8 @@ async function deleteAccount(id, actor) {
 
   const driver = getDriver();
   for (const file of files) {
-    for (const key of [file.key, file.thumbKey].filter(Boolean)) {
-      await driver.delete(key).catch((err) => getLogger().warn({ err, key }, "File cleanup failed"));
+    for (const [key, fileId] of [[file.key, file.providerFileId], [file.thumbKey, file.providerThumbFileId]]) {
+      if (key) await driver.delete(key, { fileId }).catch((err) => getLogger().warn({ err, key }, "File cleanup failed"));
     }
   }
   getLogger().warn({ accountId: String(accountId), actor: String(actor?._id), company: account.companyName }, "Tenant account deleted");

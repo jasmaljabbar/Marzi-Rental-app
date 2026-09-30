@@ -9,7 +9,7 @@ const HOLD_DURATION_MS = 4 * 60 * 60 * 1000;
 const nextExpiry = () => new Date(Date.now() + HOLD_DURATION_MS);
 
 function listFilter(req, { customer_id }) {
-  return shopFilter(req, customer_id ? { customerId: customer_id } : {});
+  return shopFilter(req, { expiresAt: { $gt: new Date() }, ...(customer_id ? { customerId: customer_id } : {}) });
 }
 
 // Creates or adjusts a customer draft's hold. Refuses (409) when the quantity
@@ -17,10 +17,13 @@ function listFilter(req, { customer_id }) {
 // for the client to offer a transfer.
 async function upsertReservation(req, { customer_id, equipment_id, quantity }) {
   const equipment = await findOwned(Equipment, equipment_id, req, { label: "Equipment", activeShopOnly: true, lean: true });
-  await findOwned(Customer, customer_id, req, { label: "Customer", activeShopOnly: true, select: "_id", lean: true });
+  const customer = await findOwned(Customer, customer_id, req, { label: "Customer", activeShopOnly: true, select: "_id isArchived", lean: true });
+  if (equipment.isArchived) throw badRequest("This equipment is archived. Restore it before reserving.", "EQUIPMENT_ARCHIVED");
+  if (customer.isArchived) throw badRequest("This customer is archived. Restore them before reserving.", "CUSTOMER_ARCHIVED");
 
   const physicallyAvailable = equipment.stockCount - (equipment.damagedCount || 0);
-  const others = await Reservation.find(shopFilter(req, { equipmentId: equipment._id, customerId: { $ne: customer_id } }))
+  // TTL cleanup is asynchronous; expired holds must stop blocking stock now.
+  const others = await Reservation.find(shopFilter(req, { equipmentId: equipment._id, customerId: { $ne: customer_id }, expiresAt: { $gt: new Date() } }))
     .sort({ quantity: -1 })
     .lean();
   const reservedByOthers = others.reduce((sum, r) => sum + r.quantity, 0);
@@ -74,7 +77,8 @@ async function clearForCustomer(req, customerId) {
 
 async function transferReservation(req, id, { to_customer_id }) {
   const reservation = await findOwned(Reservation, id, req, { label: "Reservation" });
-  const toCustomer = await Customer.findOne(shopFilter(req, { _id: to_customer_id })).select("name").lean();
+  if (reservation.expiresAt <= new Date()) throw notFound("Reservation has expired.");
+  const toCustomer = await Customer.findOne(shopFilter(req, { _id: to_customer_id, isArchived: { $ne: true } })).select("name").lean();
   if (!toCustomer) throw badRequest("Customer not found.", "INVALID_CUSTOMER");
 
   const [equipment, fromCustomer] = await Promise.all([
@@ -93,7 +97,7 @@ async function transferReservation(req, id, { to_customer_id }) {
 
   let result;
   if (existing && String(existing._id) !== String(reservation._id)) {
-    existing.quantity += reservation.quantity;
+    existing.quantity = (existing.expiresAt > new Date() ? existing.quantity : 0) + reservation.quantity;
     existing.createdBy = req.tenant.username;
     existing.createdByUserId = req.tenant.userId;
     existing.expiresAt = nextExpiry();
