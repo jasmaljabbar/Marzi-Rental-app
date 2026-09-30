@@ -42,10 +42,8 @@ function createServerlessHandler(createApp) {
     try {
       application = await ready();
     } catch (err) {
-      // Keep startup failures actionable in Vercel logs without exposing
-      // connection strings, configuration or credentials to HTTP clients.
-      try { getLogger().error({ err }, "API initialization failed"); }
-      catch { console.error("API initialization failed: invalid environment configuration"); }
+      console.error("API initialization failed:", err && err.message ? err.message : err);
+      try { getLogger().error({ err }, "API initialization failed"); } catch (_) {}
       res.statusCode = 503;
       res.setHeader("Content-Type", "application/json");
       res.setHeader("Cache-Control", "no-store");

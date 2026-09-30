@@ -2,6 +2,7 @@
 node_modules/
 dist/
 build/
+.vercel/
 coverage/
 .dart_tool/
 .gradle/
